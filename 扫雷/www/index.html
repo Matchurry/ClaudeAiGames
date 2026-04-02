@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>扫雷大师</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%; height: -webkit-fill-available; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e; color: #eee;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+#app {
+  display: flex; flex-direction: column;
+  height: 100vh; height: 100dvh;
+  max-width: 480px; margin: 0 auto;
+  padding: env(safe-area-inset-top, 8px) 8px env(safe-area-inset-bottom, 8px);
+}
+
+/* Header */
+.header { text-align: center; padding: 6px 0 2px; flex-shrink: 0; }
+.header h1 {
+  font-size: 20px;
+  background: linear-gradient(135deg, #f7971e, #ffd200);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* Info Bar */
+.info-bar {
+  display: flex; justify-content: space-around; align-items: center;
+  background: #16213e; border-radius: 12px; padding: 7px 12px; margin: 4px 0;
+  font-size: 14px; font-weight: 600; flex-shrink: 0;
+}
+.info-item { display: flex; align-items: center; gap: 4px; }
+.info-item span { font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; }
+
+/* Difficulty */
+.difficulty {
+  display: flex; justify-content: center; gap: 6px; margin: 4px 0; flex-shrink: 0;
+}
+.diff-btn {
+  padding: 5px 14px; border: 2px solid #0f3460; border-radius: 20px;
+  background: transparent; color: #aaa; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  min-height: 32px;
+}
+.diff-btn.active {
+  background: #0f3460; color: #ffd200; border-color: #ffd200;
+}
+
+/* Status Bar */
+.status-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 2px 8px; font-size: 12px; color: #888; min-height: 20px; flex-shrink: 0;
+}
+.shield-status { transition: all 0.3s; }
+.shield-status.active { color: #4ade80; font-weight: 600; }
+.double-status { transition: all 0.3s; }
+.double-status.active { color: #fbbf24; font-weight: 600; }
+
+/* Board */
+.board-container {
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+  overflow: auto; padding: 4px 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+.board {
+  display: grid; gap: 2px; padding: 6px;
+  background: #16213e; border-radius: 12px;
+  margin: auto;
+}
+
+/* Cell */
+.cell {
+  display: flex; align-items: center; justify-content: center;
+  background: #2a3a5c; border-radius: 5px;
+  font-weight: 700; cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
+  position: relative;
+  /* Prevent text selection on cell content */
+  -webkit-touch-callout: none;
+}
+/* Unrevealed cell hover / press feedback */
+.cell:not(.revealed).pressing {
+  background: #3d5280;
+  transform: scale(0.92);
+}
+.cell.revealed {
+  background: #0d1b3e; cursor: default;
+}
+.cell.flagged {
+  background: #2a3a5c;
+}
+.cell.flagged::after {
+  content: '🚩';
+  font-size: inherit;
+}
+/* Flag pulse animation */
+.cell.flag-pulse {
+  animation: flagPulse 0.35s ease;
+}
+.cell.mine-exploded {
+  background: #dc2626 !important;
+  animation: explode 0.4s ease;
+}
+.cell.mine-shown { background: #3a1a1a; }
+.cell.hint-opened {
+  animation: hintPop 0.5s ease;
+}
+
+/* Number Colors */
+.cell[data-num="1"] { color: #60a5fa; }
+.cell[data-num="2"] { color: #4ade80; }
+.cell[data-num="3"] { color: #f87171; }
+.cell[data-num="4"] { color: #a78bfa; }
+.cell[data-num="5"] { color: #f97316; }
+.cell[data-num="6"] { color: #2dd4bf; }
+.cell[data-num="7"] { color: #e879f9; }
+.cell[data-num="8"] { color: #94a3b8; }
+
+/* Special Cell Glow */
+.cell.special-revealed {
+  animation: specialGlow 0.6s ease;
+}
+
+/* ===== Bottom Toolbar ===== */
+.toolbar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 8px 12px; flex-shrink: 0;
+  background: #16213e; border-radius: 16px; margin-top: 4px;
+}
+.tool-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 20px; border: 2px solid transparent; border-radius: 14px;
+  background: #0d1b3e; color: #aaa;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; min-height: 44px; min-width: 44px;
+  flex: 1; max-width: 160px;
+}
+.tool-btn.active {
+  border-color: #ffd200; color: #ffd200; background: #1a2d52;
+}
+.tool-btn .tool-icon { font-size: 20px; line-height: 1; }
+.tool-btn .tool-label { font-size: 13px; }
+
+/* New Game button in toolbar */
+.tool-btn-new {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border: none; border-radius: 12px;
+  background: #0d1b3e; color: #aaa; font-size: 22px; cursor: pointer;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.tool-btn-new:active { transform: scale(0.9); background: #1a2d52; }
+
+/* Overlay */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+.overlay-content {
+  background: #16213e; border-radius: 20px; padding: 32px 28px;
+  text-align: center; max-width: 320px; width: 90%;
+  animation: slideUp 0.3s ease;
+}
+.overlay-content h2 { font-size: 28px; margin-bottom: 8px; }
+.overlay-content p { color: #aaa; margin: 4px 0; font-size: 15px; }
+.overlay-content .score-big { font-size: 42px; font-weight: 800; color: #ffd200; margin: 12px 0; }
+.restart-btn {
+  margin-top: 16px; padding: 12px 36px; border: none; border-radius: 25px;
+  background: linear-gradient(135deg, #f7971e, #ffd200); color: #1a1a2e;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: transform 0.2s; min-height: 48px;
+}
+.restart-btn:active { transform: scale(0.95); }
+
+/* Toast */
+.toast {
+  position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.88); color: #fff; padding: 12px 24px;
+  border-radius: 12px; font-size: 15px; font-weight: 600; z-index: 200;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* Animations */
+@keyframes explode {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+@keyframes hintPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes specialGlow {
+  0% { box-shadow: 0 0 0 0 rgba(255,210,0,0.6); }
+  50% { box-shadow: 0 0 15px 5px rgba(255,210,0,0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(255,210,0,0); }
+}
+@keyframes flagPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.shake { animation: shake 0.4s ease; }
+
+/* Desktop hover */
+@media (hover: hover) {
+  .cell:not(.revealed):hover { background: #354a70; }
+  .tool-btn:hover { background: #1a2d52; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header"><h1>扫雷大师</h1></div>
+
+  <div class="info-bar">
+    <div class="info-item">💣 <span id="mineCount">10</span></div>
+    <div class="info-item">⏱ <span id="timer">00:00</span></div>
+    <div class="info-item">🏅 <span id="score">0</span></div>
+  </div>
+
+  <div class="difficulty">
+    <button class="diff-btn active" data-level="easy">初级</button>
+    <button class="diff-btn" data-level="medium">中级</button>
+    <button class="diff-btn" data-level="hard">高级</button>
+  </div>
+
+  <div class="status-bar">
+    <span class="shield-status" id="shieldStatus">🛡️ 护盾: 未激活</span>
+    <span class="double-status" id="doubleStatus"></span>
+  </div>
+
+  <div class="board-container" id="boardContainer">
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- Mobile-friendly bottom toolbar -->
+  <div class="toolbar">
+    <button class="tool-btn active" id="btnDig">
+      <span class="tool-icon">⛏️</span>
+      <span class="tool-label">挖开</span>
+    </button>
+    <button class="tool-btn" id="btnFlag">
+      <span class="tool-icon">🚩</span>
+      <span class="tool-label">标旗</span>
+    </button>
+    <button class="tool-btn-new" id="btnNew" title="新游戏">🔄</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-content">
+    <h2 id="overlayTitle">💥 游戏结束</h2>
+    <p id="overlayMsg">踩到地雷了！</p>
+    <div class="score-big" id="overlayScore">0</div>
+    <p id="overlayTime"></p>
+    <button class="restart-btn" id="restartBtn">再来一局</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONFIG =====
+const LEVELS = {
+  easy:   { rows: 9,  cols: 9,  mines: 10, specials: 3 },
+  medium: { rows: 16, cols: 10, mines: 30, specials: 5 },
+  hard:   { rows: 20, cols: 10, mines: 50, specials: 7 },
+};
+const SPECIAL_TYPES = ['hint', 'shield', 'xray', 'double'];
+const SPECIAL_ICONS = { hint: '💡', shield: '🛡️', xray: '🔮', double: '⭐' };
+const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+// ===== STATE =====
+let level = 'easy';
+let board = [];
+let rows, cols, totalMines, totalSpecials;
+let gameStarted = false, gameOver = false, gameWon = false;
+let firstClick = true;
+let flagCount = 0, score = 0;
+let shieldActive = false, shieldCount = 0;
+let doubleActive = false, doubleTimer = null, doubleRemaining = 0;
+let timerInterval = null, seconds = 0;
+
+// Mode: 'dig' or 'flag'
+let currentMode = 'dig';
+
+// ===== DOM =====
+const $board = document.getElementById('board');
+const $boardContainer = document.getElementById('boardContainer');
+const $mineCount = document.getElementById('mineCount');
+const $timer = document.getElementById('timer');
+const $score = document.getElementById('score');
+const $shieldStatus = document.getElementById('shieldStatus');
+const $doubleStatus = document.getElementById('doubleStatus');
+const $overlay = document.getElementById('overlay');
+const $toast = document.getElementById('toast');
+const $btnDig = document.getElementById('btnDig');
+const $btnFlag = document.getElementById('btnFlag');
+const $btnNew = document.getElementById('btnNew');
+
+// ===== INIT =====
+function init() {
+  const cfg = LEVELS[level];
+  rows = cfg.rows; cols = cfg.cols;
+  totalMines = cfg.mines; totalSpecials = cfg.specials;
+  board = [];
+  gameStarted = false; gameOver = false; gameWon = false; firstClick = true;
+  flagCount = 0; score = 0; seconds = 0;
+  shieldActive = false; shieldCount = 0;
+  doubleActive = false; doubleRemaining = 0;
+  if (doubleTimer) { clearInterval(doubleTimer); doubleTimer = null; }
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+  for (let r = 0; r < rows; r++) {
+    board[r] = [];
+    for (let c = 0; c < cols; c++) {
+      board[r][c] = { type: 'empty', revealed: false, flagged: false, number: 0 };
+    }
+  }
+
+  // Reset to dig mode
+  setMode('dig');
+  updateUI();
+  renderBoard();
+  // Scroll to top of board
+  $boardContainer.scrollTop = 0;
+}
+
+function placeMinesAndSpecials(safeR, safeC) {
+  const safeCells = new Set();
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = safeR + dr, nc = safeC + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols)
+        safeCells.add(nr * cols + nc);
+    }
+
+  const available = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (!safeCells.has(r * cols + c)) available.push([r, c]);
+
+  shuffle(available);
+
+  let idx = 0;
+  for (let i = 0; i < totalMines && idx < available.length; i++, idx++)
+    board[available[idx][0]][available[idx][1]].type = 'mine';
+
+  const specialSlots = [];
+  for (; idx < available.length; idx++) {
+    const [r, c] = available[idx];
+    if (board[r][c].type === 'empty') specialSlots.push([r, c]);
+    if (specialSlots.length >= totalSpecials) break;
+  }
+
+  let hintPlaced = false;
+  for (let i = 0; i < specialSlots.length; i++) {
+    let t;
+    if (!hintPlaced && i === 0) { t = 'hint'; hintPlaced = true; }
+    else { t = SPECIAL_TYPES[Math.floor(Math.random() * SPECIAL_TYPES.length)]; }
+    board[specialSlots[i][0]][specialSlots[i][1]].type = t;
+  }
+
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      if (board[r][c].type === 'mine') continue;
+      let count = 0;
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].type === 'mine') count++;
+      }
+      board[r][c].number = count;
+    }
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ===== RENDER =====
+function calcCellSize() {
+  const maxW = Math.min(window.innerWidth, 480) - 28; // account for padding + gap
+  const maxH = $boardContainer.clientHeight - 16;
+  const sizeByW = Math.floor(maxW / cols);
+  const sizeByH = Math.floor(maxH / rows);
+  // Prioritize fitting width; allow vertical scroll if needed
+  const size = Math.min(sizeByW, sizeByH + 4);
+  // Clamp: minimum 32px for tappability, max 48px
+  return Math.max(32, Math.min(size, 48));
+}
+
+function renderBoard() {
+  const cellSize = calcCellSize();
+  $board.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  $board.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+  $board.innerHTML = '';
+
+  const fontSize = Math.max(cellSize * 0.42, 13) + 'px';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.style.width = cellSize + 'px';
+      div.style.height = cellSize + 'px';
+      div.style.fontSize = fontSize;
+      div.dataset.r = r;
+      div.dataset.c = c;
+      updateCellDOM(div, r, c);
+      $board.appendChild(div);
+    }
+  }
+}
+
+function updateCellDOM(div, r, c) {
+  const cell = board[r][c];
+  // Keep only 'cell' class and preserve pressing state
+  const wasPressing = div.classList.contains('pressing');
+  div.className = 'cell';
+  div.dataset.num = '';
+  div.textContent = '';
+
+  if (cell.flagged && !cell.revealed) {
+    div.classList.add('flagged');
+    if (wasPressing) div.classList.add('pressing');
+    return;
+  }
+
+  if (!cell.revealed) {
+    if (wasPressing) div.classList.add('pressing');
+    return;
+  }
+
+  div.classList.add('revealed');
+
+  if (cell.type === 'mine') {
+    div.textContent = '💣';
+    if (cell.exploded) div.classList.add('mine-exploded');
+    else div.classList.add('mine-shown');
+  } else if (SPECIAL_TYPES.includes(cell.type)) {
+    div.textContent = SPECIAL_ICONS[cell.type];
+    div.classList.add('special-revealed');
+  } else if (cell.number > 0) {
+    div.textContent = cell.number;
+    div.dataset.num = cell.number;
+  }
+}
+
+function getCellDiv(r, c) {
+  return $board.children[r * cols + c];
+}
+
+function refreshCell(r, c) {
+  updateCellDOM(getCellDiv(r, c), r, c);
+}
+
+// ===== GAME LOGIC =====
+function revealCell(r, c) {
+  if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+  const cell = board[r][c];
+  if (cell.revealed || cell.flagged) return;
+
+  if (firstClick) {
+    firstClick = false;
+    placeMinesAndSpecials(r, c);
+    startTimer();
+  }
+
+  cell.revealed = true;
+
+  if (cell.type === 'mine') {
+    if (shieldActive) {
+      shieldActive = false;
+      shieldCount--;
+      cell.type = 'empty';
+      cell.number = 0;
+      let count = 0;
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].type === 'mine') count++;
+      }
+      cell.number = count;
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].type !== 'mine') {
+          let cnt = 0;
+          for (const [dr2, dc2] of DIRS) {
+            const nnr = nr + dr2, nnc = nc + dc2;
+            if (nnr >= 0 && nnr < rows && nnc >= 0 && nnc < cols && board[nnr][nnc].type === 'mine') cnt++;
+          }
+          board[nr][nc].number = cnt;
+          if (board[nr][nc].revealed) refreshCell(nr, nc);
+        }
+      }
+      refreshCell(r, c);
+      addScore(20);
+      showToast('🛡️ 护盾抵消了地雷！');
+      tryVibrate([100, 50, 100]);
+      updateUI();
+      if (cell.number === 0) floodReveal(r, c);
+      checkWin();
+      return;
+    }
+    cell.exploded = true;
+    gameOver = true;
+    tryVibrate([200, 100, 200, 100, 200]);
+    endGame(false);
+    return;
+  }
+
+  if (cell.type === 'hint') {
+    addScore(30); refreshCell(r, c); handleHint();
+  } else if (cell.type === 'shield') {
+    shieldActive = true; shieldCount++;
+    addScore(20); refreshCell(r, c);
+    showToast('🛡️ 获得护盾！下次踩雷免死');
+    tryVibrate([50, 30, 50]);
+  } else if (cell.type === 'xray') {
+    addScore(20); refreshCell(r, c); handleXRay(r, c);
+  } else if (cell.type === 'double') {
+    addScore(20); refreshCell(r, c); handleDouble();
+  } else {
+    addScore(10); refreshCell(r, c);
+    if (cell.number === 0) floodReveal(r, c);
+  }
+
+  updateUI();
+  checkWin();
+}
+
+function floodReveal(r, c) {
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+      const neighbor = board[nr][nc];
+      if (!neighbor.revealed && !neighbor.flagged && neighbor.type !== 'mine') {
+        neighbor.revealed = true;
+        refreshCell(nr, nc);
+        addScore(5);
+        if (SPECIAL_TYPES.includes(neighbor.type)) {
+          if (neighbor.type === 'hint') handleHint();
+          else if (neighbor.type === 'shield') { shieldActive = true; shieldCount++; showToast('🛡️ 获得护盾！'); }
+          else if (neighbor.type === 'xray') handleXRay(nr, nc);
+          else if (neighbor.type === 'double') handleDouble();
+        }
+        if (neighbor.number === 0 && !SPECIAL_TYPES.includes(neighbor.type)) floodReveal(nr, nc);
+      }
+    }
+  }
+}
+
+function chordReveal(r, c) {
+  const cell = board[r][c];
+  if (!cell.revealed || cell.number === 0) return;
+
+  let flagsAround = 0;
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].flagged) flagsAround++;
+  }
+
+  if (flagsAround === cell.number) {
+    for (const [dr, dc] of DIRS) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !board[nr][nc].flagged && !board[nr][nc].revealed) {
+        revealCell(nr, nc);
+        if (gameOver) return;
+      }
+    }
+  }
+}
+
+function handleHint() {
+  const safeCells = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const cell = board[r][c];
+      if (!cell.revealed && !cell.flagged && cell.type !== 'mine')
+        safeCells.push([r, c]);
+    }
+
+  shuffle(safeCells);
+  const toOpen = Math.min(4, safeCells.length);
+  showToast(`💡 提醒: 打开${toOpen}个安全格`);
+  tryVibrate([30, 20, 30, 20, 30, 20, 30]);
+
+  for (let i = 0; i < toOpen; i++) {
+    const [r, c] = safeCells[i];
+    setTimeout(() => {
+      if (gameOver) return;
+      board[r][c].revealed = true;
+      const div = getCellDiv(r, c);
+      updateCellDOM(div, r, c);
+      div.classList.add('hint-opened');
+      addScore(5);
+      updateUI();
+      if (board[r][c].type === 'empty' && board[r][c].number === 0) floodReveal(r, c);
+      checkWin();
+    }, i * 200);
+  }
+}
+
+function handleXRay(r, c) {
+  let flagged = 0;
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].type === 'mine' && !board[nr][nc].flagged) {
+      board[nr][nc].flagged = true;
+      flagCount++;
+      flagged++;
+      const div = getCellDiv(nr, nc);
+      refreshCell(nr, nc);
+      div.classList.add('flag-pulse');
+    }
+  }
+  showToast(`🔮 透视: 标记了${flagged}颗雷`);
+  tryVibrate([40, 30, 40]);
+  updateUI();
+}
+
+function handleDouble() {
+  doubleActive = true;
+  doubleRemaining = 10;
+  if (doubleTimer) clearInterval(doubleTimer);
+  doubleTimer = setInterval(() => {
+    doubleRemaining--;
+    updateUI();
+    if (doubleRemaining <= 0) {
+      doubleActive = false;
+      clearInterval(doubleTimer);
+      doubleTimer = null;
+      updateUI();
+    }
+  }, 1000);
+  showToast('⭐ 双倍得分 10秒！');
+  tryVibrate([50]);
+  updateUI();
+}
+
+function addScore(pts) {
+  score += doubleActive ? pts * 2 : pts;
+}
+
+function checkWin() {
+  if (gameOver) return;
+  let unrevealed = 0;
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (!board[r][c].revealed) unrevealed++;
+
+  if (unrevealed === totalMines) {
+    gameWon = true;
+    gameOver = true;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (!board[r][c].revealed && !board[r][c].flagged) {
+          board[r][c].flagged = true;
+          refreshCell(r, c);
+        }
+    tryVibrate([100, 50, 100, 50, 300]);
+    endGame(true);
+  }
+}
+
+function endGame(won) {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (doubleTimer) { clearInterval(doubleTimer); doubleTimer = null; }
+
+  if (!won) {
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (board[r][c].type === 'mine' && !board[r][c].revealed) {
+          board[r][c].revealed = true;
+          refreshCell(r, c);
+        }
+    $boardContainer.classList.add('shake');
+    setTimeout(() => $boardContainer.classList.remove('shake'), 400);
+  }
+
+  setTimeout(() => {
+    document.getElementById('overlayTitle').textContent = won ? '🎉 胜利！' : '💥 游戏结束';
+    document.getElementById('overlayMsg').textContent = won ? '成功排除所有地雷！' : '踩到地雷了！';
+    document.getElementById('overlayScore').textContent = score;
+    document.getElementById('overlayTime').textContent = `用时 ${formatTime(seconds)}`;
+    $overlay.classList.add('show');
+  }, won ? 300 : 600);
+}
+
+// ===== TIMER =====
+function startTimer() {
+  if (timerInterval) return;
+  gameStarted = true;
+  timerInterval = setInterval(() => {
+    seconds++;
+    $timer.textContent = formatTime(seconds);
+  }, 1000);
+}
+
+function formatTime(s) {
+  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+
+// ===== UI UPDATE =====
+function updateUI() {
+  $mineCount.textContent = totalMines - flagCount;
+  $score.textContent = score;
+  $shieldStatus.textContent = shieldActive ? '🛡️ 护盾: 已激活' : '🛡️ 护盾: 未激活';
+  $shieldStatus.className = 'shield-status' + (shieldActive ? ' active' : '');
+  $doubleStatus.textContent = doubleActive ? `⭐ x2: ${doubleRemaining}s` : '';
+  $doubleStatus.className = 'double-status' + (doubleActive ? ' active' : '');
+}
+
+function showToast(msg) {
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  clearTimeout($toast._timer);
+  $toast._timer = setTimeout(() => $toast.classList.remove('show'), 1800);
+}
+
+function tryVibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ===== MODE SWITCHING =====
+function setMode(mode) {
+  currentMode = mode;
+  $btnDig.classList.toggle('active', mode === 'dig');
+  $btnFlag.classList.toggle('active', mode === 'flag');
+}
+
+$btnDig.addEventListener('click', () => setMode('dig'));
+$btnFlag.addEventListener('click', () => setMode('flag'));
+$btnNew.addEventListener('click', () => init());
+
+// ===== CELL INTERACTION =====
+// Unified: single tap does action based on current mode.
+// Long-press always toggles flag (quick shortcut).
+// On desktop: right-click = flag.
+
+let touchState = null; // { r, c, timer, moved, startX, startY }
+
+function cellAction(r, c) {
+  if (gameOver) return;
+  const cell = board[r][c];
+
+  if (cell.revealed) {
+    // Tap on revealed number = chord
+    chordReveal(r, c);
+    return;
+  }
+
+  if (currentMode === 'flag') {
+    toggleFlag(r, c);
+  } else {
+    if (cell.flagged) return; // can't dig a flagged cell
+    revealCell(r, c);
+  }
+}
+
+function toggleFlag(r, c) {
+  const cell = board[r][c];
+  if (cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  flagCount += cell.flagged ? 1 : -1;
+  const div = getCellDiv(r, c);
+  refreshCell(r, c);
+  if (cell.flagged) {
+    div.classList.add('flag-pulse');
+    tryVibrate([30]);
+  }
+  updateUI();
+}
+
+// Touch handling with press feedback + long-press flag shortcut
+$board.addEventListener('touchstart', e => {
+  const cellDiv = e.target.closest('.cell');
+  if (!cellDiv || gameOver) return;
+
+  const touch = e.touches[0];
+  const r = +cellDiv.dataset.r, c = +cellDiv.dataset.c;
+
+  // Press feedback
+  cellDiv.classList.add('pressing');
+
+  touchState = {
+    r, c, moved: false,
+    startX: touch.clientX, startY: touch.clientY,
+    timer: setTimeout(() => {
+      // Long-press = flag (regardless of current mode)
+      if (touchState && !touchState.moved) {
+        touchState.longFired = true;
+        cellDiv.classList.remove('pressing');
+        toggleFlag(r, c);
+      }
+    }, 400),
+  };
+}, { passive: true });
+
+$board.addEventListener('touchmove', e => {
+  if (!touchState) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - touchState.startX;
+  const dy = touch.clientY - touchState.startY;
+  // If finger moved more than 10px, cancel
+  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+    touchState.moved = true;
+    clearTimeout(touchState.timer);
+    // Remove press state
+    const cellDiv = getCellDiv(touchState.r, touchState.c);
+    if (cellDiv) cellDiv.classList.remove('pressing');
+  }
+}, { passive: true });
+
+$board.addEventListener('touchend', e => {
+  if (!touchState) return;
+  const { r, c, moved, longFired } = touchState;
+  clearTimeout(touchState.timer);
+  touchState = null;
+
+  const cellDiv = getCellDiv(r, c);
+  if (cellDiv) cellDiv.classList.remove('pressing');
+
+  if (moved || longFired) return;
+
+  // Short tap → action based on current mode
+  cellAction(r, c);
+});
+
+$board.addEventListener('touchcancel', () => {
+  if (touchState) {
+    clearTimeout(touchState.timer);
+    const cellDiv = getCellDiv(touchState.r, touchState.c);
+    if (cellDiv) cellDiv.classList.remove('pressing');
+    touchState = null;
+  }
+});
+
+// Prevent context menu on board
+$board.addEventListener('contextmenu', e => e.preventDefault());
+
+// Desktop mouse: left click = action, right click = flag
+$board.addEventListener('mousedown', e => {
+  if (e.button === 2) {
+    e.preventDefault();
+    const cellDiv = e.target.closest('.cell');
+    if (!cellDiv || gameOver) return;
+    toggleFlag(+cellDiv.dataset.r, +cellDiv.dataset.c);
+  }
+});
+
+$board.addEventListener('click', e => {
+  // Skip on touch devices — touch handlers take care of it
+  if ('ontouchstart' in window) return;
+  const cellDiv = e.target.closest('.cell');
+  if (!cellDiv || gameOver) return;
+  cellAction(+cellDiv.dataset.r, +cellDiv.dataset.c);
+});
+
+// ===== DIFFICULTY =====
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    level = btn.dataset.level;
+    init();
+  });
+});
+
+// ===== OVERLAY =====
+document.getElementById('restartBtn').addEventListener('click', () => {
+  $overlay.classList.remove('show');
+  init();
+});
+
+// ===== RESIZE =====
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    renderBoard();
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        updateCellDOM(getCellDiv(r, c), r, c);
+  }, 100);
+});
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
