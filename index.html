@@ -3,858 +3,2133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>田园物语</title>
+<title>需求工厂</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+html { background: #06040f; width: 100%; height: 100%; }
+body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  background: transparent;
   color: #fff;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: none;
 }
 
+/* ── Dual background layers ── */
+#bg-day, #bg-night {
+  position: fixed; inset: 0; z-index: -1;
+  transition: opacity 5s ease;
+  pointer-events: none;
+}
+#bg-day {
+  opacity: 1;
+  background:
+    radial-gradient(ellipse at 75% 15%, rgba(139,60,220,0.25) 0%, transparent 55%),
+    linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+}
+#bg-night {
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(30,80,180,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(10,30,80,0.15) 0%, transparent 45%),
+    linear-gradient(135deg, #020408, #04091a, #080e20);
+}
 #app {
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  max-width: 500px; margin: 0 auto;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 
 /* ── Top Bar ── */
 #top-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 14px; flex-shrink: 0;
-  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: rgba(0,0,0,0.4);
+  flex-shrink: 0; flex-wrap: wrap;
+  transition: background 5s ease;
 }
-#top-bar h1 {
-  font-size: 17px;
-  background: linear-gradient(90deg, #56ab2f, #a8e063);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+body.night-mode #top-bar { background: rgba(0,5,20,0.55); }
+#money-display { font-size: 16px; font-weight: 800; color: #ffd700; flex: 1; }
+#money-display small { font-size: 10px; color: rgba(255,215,0,0.5); font-weight: 400; margin-left: 4px; }
+#save-badge { font-size: 10px; color: rgba(255,255,255,0.3); opacity: 0; transition: opacity 0.5s; white-space: nowrap; }
+.top-btn {
+  padding: 6px 14px; border: none; border-radius: 20px;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: transform 0.15s;
 }
-#coin-display {
-  font-size: 15px; font-weight: 700; color: #ffd700;
-  display: flex; align-items: center; gap: 4px;
-}
-#total-display {
-  font-size: 12px; color: rgba(255,255,255,0.45);
-}
+.top-btn:active { transform: scale(0.93); }
+#btn-recruit { background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; }
+#btn-shop    { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.18); }
 
-/* ── Status Bar ── */
-#status-bar {
-  display: flex; justify-content: space-around; align-items: center;
-  padding: 4px 14px; font-size: 11px; color: rgba(255,255,255,0.5);
-  background: rgba(0,0,0,0.2); flex-shrink: 0;
-  gap: 12px;
-}
-#status-bar span { white-space: nowrap; }
-.status-active { color: #a8e063 !important; font-weight: 600; }
+/* ── Scene ── */
+#scene { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
-/* ── Farm Grid ── */
-#farm-area {
-  flex: 1; overflow-y: auto; padding: 10px 8px;
-  display: flex; align-items: flex-start; justify-content: center;
-  -webkit-overflow-scrolling: touch;
+/* ── PM Panel ── */
+#pm-panel {
+  width: 110px; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 5px;
+  background: rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 6px;
+  transition: background 5s ease;
 }
-#farm-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
+body.night-mode #pm-panel { background: rgba(0,8,30,0.35); }
+#pm-ring-wrap { position: relative; width: 72px; height: 72px; }
+#pm-ring {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: conic-gradient(#a855f7 0deg, rgba(255,255,255,0.08) 0deg);
+  display: flex; align-items: center; justify-content: center;
 }
+#pm-ring::before {
+  content: ''; position: absolute; inset: 5px; border-radius: 50%;
+  background: #1a1535; z-index: 1;
+}
+#pm-char { position: relative; z-index: 2; font-size: 30px; line-height: 1; }
+#pm-char.sending { animation: pmSend 0.3s ease-out; }
+@keyframes pmSend {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25) translateX(4px); }
+  100% { transform: scale(1); }
+}
+#pm-speech {
+  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+  background: rgba(168,85,247,0.9); color: #fff; font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 10px; white-space: nowrap;
+  opacity: 0; pointer-events: none; z-index: 10; transition: opacity 0.2s;
+}
+#pm-speech.show { opacity: 1; }
 
-.plot {
-  position: relative;
-  background: rgba(255,255,255,0.06);
-  border: 2px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  aspect-ratio: 1 / 1;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, transform 0.15s;
-  overflow: hidden;
-  min-height: 80px;
-}
-.plot:active { transform: scale(0.94); }
+#pm-label { font-size: 13px; font-weight: 800; color: #c084fc; text-align: center; transition: color 5s ease; }
+#pm-time  { font-size: 15px; font-weight: 800; color: #fde68a; text-align: center; letter-spacing: 0.05em; transition: color 5s ease; }
+body.night-mode #pm-label { color: #60a5fa; }
+body.night-mode #pm-time  { color: #93c5fd; }
+#pm-sub   { font-size: 9px; color: rgba(255,255,255,0.3); text-align: center; }
 
-.plot.empty {
-  border-style: dashed;
-  border-color: rgba(255,255,255,0.18);
+#pm-stats {
+  width: 100%; background: rgba(255,255,255,0.04);
+  border-radius: 8px; padding: 6px 8px;
 }
-.plot.empty:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+.pm-stat-row {
+  display: flex; justify-content: space-between;
+  font-size: 9px; color: rgba(255,255,255,0.45); margin-bottom: 2px;
+}
+.pm-stat-row:last-child { margin-bottom: 0; }
+.pm-stat-val { color: #a8e063; font-weight: 700; }
+.pm-stat-val.purple { color: #c084fc; }
 
-.plot.growing { border-color: rgba(168, 224, 99, 0.4); }
-.plot.ready {
-  border-color: #ffd700;
-  background: rgba(255, 215, 0, 0.08);
-  animation: plotGlow 1.2s ease-in-out infinite alternate;
+.pool-bar-track {
+  height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px;
+  overflow: hidden; margin: 2px 0 4px;
 }
-@keyframes plotGlow {
-  from { box-shadow: 0 0 6px rgba(255,215,0,0.3); }
-  to   { box-shadow: 0 0 18px rgba(255,215,0,0.65); }
-}
-
-.plot-emoji {
-  font-size: 32px; line-height: 1;
-  transition: transform 0.3s;
-}
-.plot.growing .plot-emoji { animation: cropPulse 2.5s ease-in-out infinite; }
-.plot.ready .plot-emoji   { animation: cropBounce 0.8s ease-in-out infinite alternate; }
-@keyframes cropPulse {
-  0%,100% { transform: scale(0.92); }
-  50%     { transform: scale(1.04); }
-}
-@keyframes cropBounce {
-  from { transform: translateY(0) scale(1); }
-  to   { transform: translateY(-4px) scale(1.06); }
-}
-
-.plot-label {
-  font-size: 9px; color: rgba(255,255,255,0.5);
-  margin-top: 3px; text-align: center;
-}
-.plot.ready .plot-label { color: #ffd700; font-weight: 600; }
-
-.plot-progress-wrap {
-  position: absolute; bottom: 6px; left: 8px; right: 8px;
-  height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px;
-  overflow: hidden;
-}
-.plot-progress-bar {
+.pool-bar-fill {
   height: 100%; border-radius: 2px;
-  background: linear-gradient(90deg, #56ab2f, #a8e063);
-  transition: width 0.5s linear;
-}
-.plot.ready .plot-progress-bar {
-  background: linear-gradient(90deg, #ffd700, #ffaa00);
-  width: 100% !important;
+  background: linear-gradient(90deg, #a855f7, #c084fc);
+  transition: width 0.4s;
 }
 
-.plot-add-icon {
-  font-size: 28px; color: rgba(255,255,255,0.25);
+/* ── Employee Area ── */
+#emp-area {
+  flex: 1; overflow-y: auto; padding: 8px 6px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px;
+  align-content: start; -webkit-overflow-scrolling: touch;
+}
+#emp-area::-webkit-scrollbar { width: 3px; }
+#emp-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.emp-slot-empty {
+  border: 2px dashed rgba(255,255,255,0.12); border-radius: 12px;
+  padding: 12px 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; color: rgba(255,255,255,0.2); font-size: 11px; min-height: 120px;
+}
+.emp-slot-empty .slot-icon { font-size: 20px; }
+
+/* Employee Card */
+.emp-card {
+  border-radius: 12px; padding: 8px; position: relative;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  transition: background 5s ease, border-color 5s ease;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  min-height: 120px; overflow: hidden;
+}
+.emp-card.rarity-R   { border-color: rgba(148,163,184,0.4); }
+.emp-card.rarity-SR  { border-color: rgba(167,139,250,0.5); }
+.emp-card.rarity-SSR { border-color: rgba(251,191,36,0.6); box-shadow: 0 0 10px rgba(251,191,36,0.15); }
+
+.emp-card.state-focusing   { background: rgba(59,130,246,0.06); }
+.emp-card.state-distracted { background: rgba(239,68,68,0.08); }
+.emp-card.off-duty         { opacity: 0.45; filter: saturate(0.3); }
+.emp-schedule { font-size: 8px; color: rgba(255,255,255,0.18); text-align: right; margin-top: 2px; }
+.emp-card.is-zoned { animation: zonedPulse 2s ease-in-out infinite; }
+@keyframes zonedPulse {
+  0%, 100% { background: rgba(239,68,68,0.08); }
+  50%       { background: rgba(239,68,68,0.18); }
 }
 
-/* ── Bottom Bar ── */
-#bottom-bar {
-  display: flex; gap: 10px; padding: 8px 12px;
-  background: rgba(0,0,0,0.35); flex-shrink: 0;
+.emp-card.req-received { animation: reqImpact 0.3s ease-out; }
+@keyframes reqImpact {
+  0%  { transform: scale(1); }
+  40% { transform: scale(1.04); }
+  100%{ transform: scale(1); }
 }
-.bar-btn {
-  flex: 1; padding: 12px 0; border: none; border-radius: 14px;
-  font-size: 15px; font-weight: 700; cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  font-family: inherit;
-}
-.bar-btn:active { transform: scale(0.95); }
-#btn-shop {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.18);
-  color: #fff;
-}
-#btn-shop:hover { background: rgba(255,255,255,0.16); }
-#btn-harvest-all {
-  background: linear-gradient(135deg, #56ab2f, #a8e063);
-  color: #1a1a1a;
-  box-shadow: 0 3px 14px rgba(86,171,47,0.35);
-}
-#btn-harvest-all:disabled { opacity: 0.4; cursor: default; }
 
-/* ── Overlay base ── */
+.emp-card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.emp-rarity { font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px; flex-shrink: 0; }
+.rarity-R   .emp-rarity { background: rgba(148,163,184,0.2); color: #94a3b8; }
+.rarity-SR  .emp-rarity { background: rgba(167,139,250,0.2); color: #a78bfa; }
+.rarity-SSR .emp-rarity { background: rgba(251,191,36,0.2);  color: #fbbf24; }
+.emp-name  { font-size: 11px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-emoji { font-size: 18px; line-height: 1; flex-shrink: 0; }
+
+/* Bars */
+.bar-row { margin-bottom: 4px; }
+.bar-label-row {
+  display: flex; justify-content: space-between;
+  font-size: 8px; color: rgba(255,255,255,0.35); margin-bottom: 2px;
+}
+.bar-track {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden;
+}
+.bar-fill  { height: 100%; border-radius: 2px; transition: width 0.15s linear; }
+.bar-work         { background: linear-gradient(90deg, #56ab2f, #a8e063); }
+.bar-focus-active { background: linear-gradient(90deg, #3b82f6, #93c5fd); }
+.bar-distract     { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+/* Stats */
+.emp-stats {
+  display: flex; justify-content: space-around;
+  font-size: 8px; color: rgba(255,255,255,0.4); margin-top: 4px;
+}
+.emp-stat-item { text-align: center; }
+.emp-stat-num  { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.75); display: block; }
+
+/* Manage button */
+.emp-manage-btn {
+  background: none; border: none; color: rgba(255,255,255,0.2);
+  font-size: 12px; cursor: pointer; padding: 0 2px; line-height: 1;
+  transition: color 0.15s; flex-shrink: 0;
+}
+.emp-manage-btn:hover { color: rgba(255,255,255,0.6); }
+
+
+/* Employee manage panel */
+.emp-manage-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+}
+.emp-manage-emoji { font-size: 42px; line-height: 1; }
+.emp-manage-info  { flex: 1; }
+.emp-manage-name  { font-size: 18px; font-weight: 800; }
+.emp-manage-meta  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+.emp-manage-stats {
+  display: flex; gap: 8px; margin-bottom: 18px;
+}
+.emp-manage-stat {
+  flex: 1; background: rgba(255,255,255,0.05); border-radius: 10px;
+  padding: 8px 6px; text-align: center;
+}
+.emp-manage-stat-num { font-size: 18px; font-weight: 800; display: block; }
+.emp-manage-stat-lbl { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 2px; display: block; }
+.emp-manage-section { margin-bottom: 14px; }
+.emp-manage-section-title {
+  font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 7px; font-weight: 700;
+}
+.emp-rename-row { display: flex; gap: 8px; }
+.emp-rename-input {
+  flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: #fff; font-size: 14px; font-family: inherit;
+  padding: 8px 12px; outline: none;
+}
+.emp-rename-input:focus { border-color: rgba(168,85,247,0.6); }
+.emp-rename-btn {
+  padding: 8px 16px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.emp-fire-btn {
+  width: 100%; padding: 11px; border: none; border-radius: 12px;
+  background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: background 0.2s, border-color 0.2s;
+}
+.emp-fire-btn.confirm {
+  background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.6); color: #fca5a5;
+}
+
+/* State badge */
+.emp-state-badge {
+  font-size: 8px; font-weight: 600; padding: 1px 6px; border-radius: 8px;
+  display: inline-block; margin-top: 3px;
+}
+.state-idle        .emp-state-badge { background: rgba(74,222,128,0.15);  color: #4ade80; }
+.state-focusing    .emp-state-badge { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+.state-distracted  .emp-state-badge { background: rgba(251,146,60,0.15);  color: #fb923c; }
+.is-zoned          .emp-state-badge { background: rgba(239,68,68,0.2);    color: #f87171; }
+
+body.night-mode .emp-card { background: rgba(10,30,80,0.12); border-color: rgba(96,165,250,0.12); }
+
+/* ── Log Panel ── */
+#log-panel {
+  display: none; width: 190px; flex-shrink: 0;
+  background: rgba(0,0,0,0.2); border-left: 1px solid rgba(255,255,255,0.06);
+  transition: background 5s ease;
+  flex-direction: column; overflow: hidden;
+}
+#log-title {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3);
+  padding: 8px 10px 6px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0; letter-spacing: 0.05em;
+}
+#log-entries {
+  flex: 1; overflow-y: auto; padding: 8px 8px 8px;
+}
+#log-entries::-webkit-scrollbar { width: 3px; }
+#log-entries::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.log-placeholder { font-size: 10px; color: rgba(255,255,255,0.15); text-align: center; margin-top: 20px; line-height: 1.6; }
+.log-entry { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.log-entry:last-child { border-bottom: none; }
+.log-day      { font-size: 10px; font-weight: 800; color: #c084fc; margin-bottom: 4px; }
+.log-line     { font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 2px; line-height: 1.5; }
+.log-entry-event { border-left: 2px solid rgba(253,230,138,0.25); padding-left: 6px; }
+.log-day-ev      { font-size: 9px; color: rgba(253,230,138,0.45); margin-bottom: 3px; }
+.log-event-title { font-size: 11px; font-weight: 700; color: rgba(253,230,138,0.9); margin-bottom: 2px; line-height: 1.3; }
+.log-event-desc  { font-size: 10px; color: rgba(255,255,255,0.38); line-height: 1.4; }
+@media (min-width: 860px)  { #log-panel { display: flex; width: 260px; } }
+@media (min-width: 1200px) { #log-panel { width: 320px; } #log-title { font-size: 12px; padding: 10px 14px 8px; } .log-line { font-size: 12px; } .log-day { font-size: 12px; } .log-event-title { font-size: 12px; } .log-event-desc { font-size: 11px; } .log-day-ev { font-size: 10px; } }
+@media (min-width: 1600px) { #log-panel { width: 380px; } }
+
+body.night-mode #log-panel { background: rgba(0,8,30,0.3); }
+
+/* ── Release Overlay ── */
+#release-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55);
+  animation: fadeInOut 3.5s ease forwards;
+  pointer-events: none;
+}
+@keyframes fadeInOut {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+#release-card {
+  background: linear-gradient(135deg, #1e1040, #2d1b6e);
+  border: 2px solid rgba(167,139,250,0.5);
+  border-radius: 20px; padding: 28px 36px;
+  text-align: center; max-width: 320px;
+  box-shadow: 0 0 60px rgba(139,92,246,0.4);
+}
+#release-emoji { font-size: 48px; margin-bottom: 8px; }
+#release-ver   { font-size: 22px; font-weight: 800; color: #a78bfa; margin-bottom: 16px; }
+#release-stats { font-size: 14px; line-height: 2; color: rgba(255,255,255,0.75); }
+#release-next  { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 14px; }
+
+/* ── Info Bar ── */
+#info-bar {
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 5px 8px; background: rgba(0,0,0,0.35); flex-shrink: 0;
+  font-size: 10px; color: rgba(255,255,255,0.4); gap: 4px; flex-wrap: wrap;
+  transition: background 5s ease;
+}
+body.night-mode #info-bar { background: rgba(0,5,20,0.5); }
+#info-bar span { white-space: nowrap; }
+
+/* ── Desktop responsive ── */
+@media (min-width: 768px) {
+  #top-bar { padding: 10px 20px; }
+  #money-display { font-size: 18px; }
+  #money-display small { font-size: 12px; }
+  .top-btn { padding: 8px 22px; font-size: 14px; }
+
+  #pm-panel { width: 160px; padding: 16px 12px; gap: 10px; }
+  #pm-ring-wrap { width: 92px; height: 92px; }
+  #pm-ring { width: 92px; height: 92px; }
+  #pm-char { font-size: 40px; }
+  #pm-label { font-size: 15px; }
+  #pm-sub   { font-size: 11px; }
+  .pm-stat-row { font-size: 11px; }
+  .pm-stat-row:last-child { margin-bottom: 0; }
+
+  #emp-area { gap: 10px; padding: 12px 10px; }
+
+  .emp-card { min-height: 140px; padding: 12px; }
+  .emp-card-top { margin-bottom: 7px; }
+  .emp-name { font-size: 13px; }
+  .emp-emoji { font-size: 22px; }
+  .emp-rarity { font-size: 10px; }
+  .bar-track { height: 5px; }
+  .bar-label-row { font-size: 10px; }
+  .emp-stats { font-size: 10px; }
+  .emp-stat-num { font-size: 12px; }
+  .emp-state-badge { font-size: 10px; padding: 2px 8px; }
+  .emp-slot-empty { min-height: 140px; font-size: 13px; }
+  .emp-slot-empty .slot-icon { font-size: 26px; }
+
+  #info-bar { padding: 7px 20px; font-size: 12px; }
+}
+
+@media (min-width: 1200px) {
+  #pm-panel { width: 200px; gap: 14px; padding: 20px 16px; }
+  #pm-ring-wrap { width: 110px; height: 110px; }
+  #pm-ring { width: 110px; height: 110px; }
+  #pm-char { font-size: 50px; }
+  #pm-label { font-size: 17px; }
+  .pm-stat-row { font-size: 12px; }
+
+  #emp-area { gap: 14px; padding: 16px 14px; }
+  .emp-card { min-height: 160px; padding: 14px; }
+  .emp-name { font-size: 14px; }
+  .emp-emoji { font-size: 26px; }
+}
+
+/* ── Overlays ── */
 .overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.72);
-  backdrop-filter: blur(8px);
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(10px); z-index: 200;
   display: flex; align-items: flex-end; justify-content: center;
-  z-index: 100;
-  opacity: 1; transition: opacity 0.25s;
+  transition: opacity 0.25s;
 }
 .overlay.hidden { opacity: 0; pointer-events: none; }
 
 .panel {
-  background: linear-gradient(160deg, #1e1b3a, #2a2650);
-  border-radius: 22px 22px 0 0;
-  width: 100%; max-width: 500px;
-  padding: 20px 18px 28px;
-  max-height: 80vh; overflow-y: auto;
+  background: linear-gradient(160deg, #1a1535, #251e4a);
+  border-radius: 22px 22px 0 0; width: 100%; max-width: 720px;
+  padding: 20px 16px 28px; max-height: 85vh; overflow-y: auto;
   border-top: 1px solid rgba(255,255,255,0.1);
   animation: slideUp 0.28s cubic-bezier(0.2,0.8,0.2,1);
 }
 @keyframes slideUp {
-  from { transform: translateY(60px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { transform: translateY(50px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
-.panel-title {
-  text-align: center; font-size: 18px; font-weight: 700;
-  margin-bottom: 16px; color: #a8e063;
-}
+.panel-title { text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.panel-sub   { text-align: center; font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 16px; }
 .panel-close {
-  display: block; margin: 16px auto 0;
-  padding: 9px 36px; border: none; border-radius: 50px;
-  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);
-  font-size: 14px; font-family: inherit; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.1);
-  transition: background 0.2s;
+  display: block; margin: 16px auto 0; padding: 9px 32px;
+  border: none; border-radius: 50px; background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.5); font-size: 13px; font-family: inherit; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;
 }
-.panel-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.panel-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
-/* ── Seed Picker ── */
-.seed-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+/* ── Recruit ── */
+.recruit-rates {
+  background: rgba(255,255,255,0.04); border-radius: 12px; padding: 10px 14px;
+  display: flex; justify-content: space-around; margin-bottom: 14px;
 }
-.seed-card {
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  border-radius: 12px; padding: 12px 10px;
-  cursor: pointer; transition: all 0.18s;
+.rate-item { text-align: center; }
+.rate-rarity { font-size: 11px; font-weight: 700; }
+.rate-pct { font-size: 16px; font-weight: 800; }
+.rate-R   { color: #94a3b8; }
+.rate-SR  { color: #a78bfa; }
+.rate-SSR { color: #fbbf24; }
+
+.recruit-btns { display: flex; gap: 8px; margin-bottom: 14px; }
+.recruit-btn {
+  flex: 1; padding: 13px 0; border: none; border-radius: 14px;
+  font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+  transition: transform 0.15s;
+}
+.recruit-btn:active { transform: scale(0.96); }
+.recruit-btn:disabled { opacity: 0.38; cursor: default; }
+#btn-pull1  { background: linear-gradient(135deg, #6d28d9, #a855f7); color: #fff; }
+#btn-pull10 { background: linear-gradient(135deg, #7c3aed, #c084fc); color: #fff; }
+.recruit-btn small { display: block; font-size: 10px; font-weight: 400; opacity: 0.7; margin-top: 2px; }
+
+.pool-upgrade-row {
   display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04); border-radius: 12px; padding: 10px 14px;
 }
-.seed-card:hover:not(.locked) { background: rgba(255,255,255,0.1); border-color: rgba(168,224,99,0.5); }
-.seed-card:active:not(.locked) { transform: scale(0.96); }
-.seed-card.locked { opacity: 0.35; cursor: default; filter: grayscale(0.6); }
-.seed-card.cant-afford { opacity: 0.5; cursor: default; }
-.seed-emoji { font-size: 28px; }
-.seed-info { flex: 1; }
-.seed-name { font-size: 13px; font-weight: 700; }
-.seed-cost { font-size: 11px; color: #ffd700; margin-top: 2px; }
-.seed-time { font-size: 10px; color: rgba(255,255,255,0.4); }
-.seed-yield { font-size: 10px; color: #a8e063; }
-.seed-lock-label { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.pool-info { flex: 1; }
+.pool-level-label { font-size: 12px; font-weight: 700; color: #c084fc; }
+.pool-desc { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.pool-upgrade-btn {
+  padding: 7px 14px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: transform 0.15s;
+}
+.pool-upgrade-btn:disabled { opacity: 0.35; cursor: default; }
+
+.pull-result-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.pull-result-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pull-card {
+  border-radius: 10px; padding: 8px 10px; text-align: center;
+  border: 2px solid; min-width: 70px; position: relative;
+  animation: cardReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  cursor: pointer; transition: opacity 0.2s, filter 0.2s, transform 0.15s;
+}
+.pull-card:active { transform: scale(0.95); }
+.pull-card.pull-unselected { opacity: 0.3; filter: grayscale(0.6); }
+.pull-sel-check {
+  position: absolute; top: -6px; right: -6px;
+  width: 17px; height: 17px; border-radius: 50%;
+  background: #4ade80; color: #000; font-size: 10px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 6px rgba(74,222,128,0.5);
+}
+.pull-confirm-row {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 6px;
+}
+.pull-confirm-btn {
+  padding: 11px 0; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: #0a1a0a; font-size: 14px; font-weight: 800;
+  cursor: pointer; font-family: inherit; transition: transform 0.15s;
+}
+.pull-confirm-btn:active { transform: scale(0.97); }
+.pull-confirm-btn:disabled { opacity: 0.35; cursor: default; }
+.pull-card.rarity-R   { border-color: #94a3b8; background: rgba(148,163,184,0.1); }
+.pull-card.rarity-SR  { border-color: #a78bfa; background: rgba(167,139,250,0.12); }
+.pull-card.rarity-SSR { border-color: #fbbf24; background: rgba(251,191,36,0.12); box-shadow: 0 0 12px rgba(251,191,36,0.25); }
+@keyframes cardReveal {
+  0%  { transform: scale(0) rotateY(90deg); opacity: 0; }
+  100%{ transform: scale(1) rotateY(0deg);  opacity: 1; }
+}
+.pull-card-emoji  { font-size: 22px; }
+.pull-card-name   { font-size: 10px; font-weight: 700; margin-top: 3px; }
+.pull-card-rarity { font-size: 8px; font-weight: 800; margin-top: 2px; }
+.pull-card.rarity-R   .pull-card-rarity { color: #94a3b8; }
+.pull-card.rarity-SR  .pull-card-rarity { color: #a78bfa; }
+.pull-card.rarity-SSR .pull-card-rarity { color: #fbbf24; }
+.pull-card-stats  { font-size: 8px; color: rgba(255,255,255,0.4); margin-top: 3px; }
+
+.pull-summary { font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 8px; }
+.pull-notice  { font-size: 11px; color: rgba(255,165,0,0.7); text-align: center; margin-top: 4px; }
 
 /* ── Shop ── */
 .shop-items { display: flex; flex-direction: column; gap: 8px; }
 .shop-item {
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px; padding: 12px 14px;
-  transition: background 0.18s;
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 11px 12px; transition: background 0.18s;
 }
-.shop-item:hover:not(.disabled) { background: rgba(255,255,255,0.08); }
-.shop-item.disabled { opacity: 0.38; }
-.shop-icon { font-size: 26px; }
+.shop-item.maxed { opacity: 0.35; }
+.shop-icon { font-size: 24px; flex-shrink: 0; }
 .shop-info { flex: 1; }
-.shop-name { font-size: 14px; font-weight: 700; }
-.shop-desc { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
-.shop-extra { font-size: 10px; color: rgba(255,215,0,0.65); margin-top: 2px; }
-.buy-btn {
-  padding: 7px 14px; border: none; border-radius: 20px;
+.shop-name  { font-size: 13px; font-weight: 700; }
+.shop-desc  { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.shop-extra { font-size: 9px; color: rgba(255,215,0,0.6); margin-top: 2px; }
+.shop-buy-btn {
+  padding: 6px 12px; border: none; border-radius: 10px;
   background: linear-gradient(135deg, #56ab2f, #a8e063);
-  color: #1a1a1a; font-size: 12px; font-weight: 700;
-  cursor: pointer; white-space: nowrap; font-family: inherit;
+  color: #1a1a1a; font-size: 11px; font-weight: 800;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
   transition: transform 0.15s;
 }
-.buy-btn:hover:not(:disabled) { transform: scale(1.05); }
-.buy-btn:disabled { opacity: 0.38; cursor: default; }
+.shop-buy-btn:hover:not(:disabled) { transform: scale(1.05); }
+.shop-buy-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* ── Floating text ── */
+/* ── Projectile ── */
+.req-proj {
+  position: fixed; z-index: 500; pointer-events: none;
+  font-size: 20px; line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(168,85,247,0.8));
+}
+
+/* ── Float Text ── */
 .float-text {
-  position: fixed; pointer-events: none; z-index: 300;
-  font-size: 18px; font-weight: 800; color: #ffd700;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  animation: floatUp 1s ease-out forwards;
+  position: fixed; z-index: 600; pointer-events: none;
+  font-size: 14px; font-weight: 800; color: #ffd700;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  animation: floatUp 1.1s ease-out forwards;
 }
 @keyframes floatUp {
   0%   { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-60px) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-55px) scale(1.1); }
 }
 
-.particle {
-  position: fixed; pointer-events: none; z-index: 250;
-  border-radius: 50%;
+/* ── Announce overlay ── */
+#announce-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(10px); z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; transition: opacity 0.25s;
 }
-
-/* ── Toast ── */
-#toast {
-  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.85); color: #fff;
-  padding: 9px 20px; border-radius: 20px;
-  font-size: 13px; font-weight: 600; z-index: 400;
-  pointer-events: none; opacity: 0; transition: opacity 0.3s;
-  white-space: nowrap;
+#announce-overlay.hidden { opacity: 0; pointer-events: none; }
+#announce-panel {
+  background: linear-gradient(160deg, #1a1535, #251e4a);
+  border-radius: 20px; width: 100%; max-width: 420px;
+  padding: 24px 20px 20px; border: 1px solid rgba(168,85,247,0.3);
+  box-shadow: 0 0 40px rgba(168,85,247,0.15);
+  animation: slideUp 0.28s cubic-bezier(0.2,0.8,0.2,1);
+  max-height: 80vh; overflow-y: auto;
 }
-#toast.show { opacity: 1; }
-
-/* ── Scrollbar ── */
-.panel::-webkit-scrollbar { width: 4px; }
-.panel::-webkit-scrollbar-track { background: transparent; }
-.panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
-#farm-area::-webkit-scrollbar { width: 3px; }
-#farm-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-
-/* ── Unlock Badge ── */
-.unlock-badge {
-  position: fixed; top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  background: linear-gradient(135deg, #56ab2f, #a8e063);
-  color: #1a1a1a; border-radius: 20px;
-  padding: 16px 28px; text-align: center;
-  z-index: 500; pointer-events: none;
-  font-weight: 700;
-  animation: badgePop 2s cubic-bezier(0.34,1.56,0.64,1) forwards;
+#announce-panel::-webkit-scrollbar { width: 3px; }
+#announce-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.announce-ver {
+  display: inline-block; font-size: 11px; font-weight: 800;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
 }
-@keyframes badgePop {
-  0%   { transform: translate(-50%,-50%) scale(0); opacity: 0; }
-  15%  { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
-  25%  { transform: translate(-50%,-50%) scale(1); opacity: 1; }
-  75%  { transform: translate(-50%,-50%) scale(1); opacity: 1; }
-  100% { transform: translate(-50%,-50%) scale(0.8); opacity: 0; }
+.announce-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.announce-date  { font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 16px; }
+.announce-section { margin-bottom: 14px; }
+.announce-section-title {
+  font-size: 11px; font-weight: 700; color: #c084fc;
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+}
+.announce-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 6px; line-height: 1.4;
+}
+.announce-item-dot { flex-shrink: 0; margin-top: 1px; }
+.announce-divider {
+  height: 1px; background: rgba(255,255,255,0.07); margin: 12px 0;
+}
+.announce-history-title {
+  font-size: 10px; color: rgba(255,255,255,0.2); text-align: center;
+  cursor: pointer; padding: 4px; letter-spacing: 0.03em;
+}
+.announce-history { display: none; }
+.announce-history.open { display: block; }
+.announce-old-ver { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 8px; }
+.announce-old-ver strong { color: rgba(255,255,255,0.4); }
+.announce-old-item { font-size: 11px; color: rgba(255,255,255,0.25); margin-left: 12px; }
+
+/* ── No-emp hint ── */
+#no-emp-hint {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; color: rgba(255,255,255,0.25); font-size: 12px;
+  pointer-events: none; display: none;
 }
 </style>
 </head>
 <body>
 
+<div id="bg-day"></div>
+<div id="bg-night"></div>
+
 <div id="app">
   <div id="top-bar">
-    <h1>🌾 田园物语</h1>
-    <div id="coin-display">💰 <span id="coins-val">20</span></div>
-    <div id="total-display">总收益: <span id="total-val">0</span></div>
+    <div id="money-display">💰 <span id="money-val">500</span><small>总收益: <span id="total-val">0</span></small><small id="milestone-display" style="margin-left:8px;color:rgba(167,139,250,0.7)">🚀 v1.0: 0/10</small></div>
+    <span id="save-badge">💾 已存档</span>
+    <button class="top-btn" id="btn-recruit">🎴 招募</button>
+    <button class="top-btn" id="btn-shop">🛒 商店</button>
   </div>
 
-  <div id="status-bar">
-    <span id="speed-status">⚡ 速度: 正常</span>
-    <span id="bonus-status">🪙 加成: 无</span>
-    <span id="auto-status">🤖 自动: 关闭</span>
+  <div id="scene">
+    <div id="pm-panel">
+      <div id="pm-ring-wrap">
+        <div id="pm-ring">
+          <div id="pm-char">🧑‍💼</div>
+        </div>
+        <div id="pm-speech">去工作！</div>
+      </div>
+      <div id="pm-label">第 <span id="day-count">1</span> 天</div>
+      <div id="pm-time">10:00</div>
+      <div id="pm-sub">工作中 🧑‍💼</div>
+      <div id="pm-stats">
+        <div class="pm-stat-row"><span>日产需求</span><span class="pm-stat-val" id="stat-output">5/天</span></div>
+        <div class="pm-stat-row"><span>需求池</span><span class="pm-stat-val purple" id="stat-pool">0/20</span></div>
+        <div class="pool-bar-track"><div class="pool-bar-fill" id="pool-bar" style="width:0%"></div></div>
+        <div class="pm-stat-row"><span>员工人数</span><span class="pm-stat-val" id="stat-emp-count">0</span></div>
+      </div>
+    </div>
+
+    <div id="emp-area" style="position:relative">
+      <div id="no-emp-hint">点击上方「招募」<br>召唤你的第一位员工</div>
+    </div>
+
+    <div id="log-panel">
+      <div id="log-title">📋 工作日志</div>
+      <div id="log-entries"><div class="log-placeholder">每天 20:00 下班时<br>将在此生成汇报</div></div>
+    </div>
   </div>
 
-  <div id="farm-area">
-    <div id="farm-grid"></div>
-  </div>
-
-  <div id="bottom-bar">
-    <button class="bar-btn" id="btn-shop">🛒 商店</button>
-    <button class="bar-btn" id="btn-harvest-all" disabled>🌟 一键收获</button>
+  <div id="info-bar">
+    <span id="info-idle">⏳ 待命: 0</span>
+    <span id="info-focusing">🎯 专注: 0</span>
+    <span id="info-distracted">💤 走神: 0</span>
+    <span id="info-pool">📋 池: 0/20</span>
+    <span id="info-day">第1天</span>
   </div>
 </div>
 
-<!-- Seed Picker Overlay -->
-<div class="overlay hidden" id="seed-overlay">
+<!-- Recruit Overlay -->
+<div class="overlay hidden" id="recruit-overlay">
   <div class="panel">
-    <div class="panel-title">选择种子</div>
-    <div class="seed-grid" id="seed-grid"></div>
-    <button class="panel-close" id="seed-close">取消</button>
+    <div class="panel-title" style="color:#c084fc">🎴 公开招募</div>
+    <div class="panel-sub" id="recruit-sub">抽卡概率因卡池等级而异</div>
+    <div class="recruit-rates" id="recruit-rates"></div>
+    <div class="recruit-btns">
+      <button class="recruit-btn" id="btn-pull1">单抽<small id="pull1-cost">💰 50</small></button>
+      <button class="recruit-btn" id="btn-pull10">十连<small id="pull10-cost">💰 450</small></button>
+    </div>
+    <div class="pool-upgrade-row" id="pool-upgrade-row"></div>
+    <div class="pull-result-grid" id="pull-result" style="display:none"></div>
+    <button class="panel-close" id="recruit-close">关闭</button>
+  </div>
+</div>
+
+<!-- Announce Overlay -->
+<div class="overlay hidden" id="announce-overlay" style="align-items:center">
+  <div id="announce-panel">
+    <div id="announce-content"></div>
+    <button class="panel-close" id="announce-close" style="margin-top:14px">我知道了</button>
+  </div>
+</div>
+
+<!-- Employee Manage Overlay -->
+<div class="overlay hidden" id="emp-manage-overlay">
+  <div class="panel">
+    <div id="emp-manage-content"></div>
+    <button class="panel-close" id="emp-manage-close">关闭</button>
   </div>
 </div>
 
 <!-- Shop Overlay -->
 <div class="overlay hidden" id="shop-overlay">
   <div class="panel">
-    <div class="panel-title">🛒 商店</div>
-    <div style="text-align:center;font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:14px">
-      持有金币：<span id="shop-coins" style="color:#ffd700;font-weight:700">0</span>
-    </div>
+    <div class="panel-title" style="color:#a8e063">🛒 升级商店</div>
+    <div class="panel-sub">持有金币：<span id="shop-money" style="color:#ffd700;font-weight:800">0</span></div>
     <div class="shop-items" id="shop-items"></div>
     <button class="panel-close" id="shop-close">关闭</button>
   </div>
 </div>
 
-<div id="toast"></div>
-
 <script>
-// ═══════════════════════════════════════
-//  CROPS DATA
-// ═══════════════════════════════════════
-const CROPS = [
-  { emoji: '🌾', name: '小麦',  growSec: 10,  cost: 5,   yield: 15,  unlock: 0    },
-  { emoji: '🥕', name: '胡萝卜', growSec: 30,  cost: 15,  yield: 50,  unlock: 0    },
-  { emoji: '🍅', name: '番茄',  growSec: 60,  cost: 35,  yield: 120, unlock: 50   },
-  { emoji: '🌽', name: '玉米',  growSec: 120, cost: 80,  yield: 280, unlock: 200  },
-  { emoji: '🍓', name: '草莓',  growSec: 300, cost: 200, yield: 750, unlock: 800  },
-  { emoji: '🌻', name: '向日葵', growSec: 600, cost: 500, yield: 2000,unlock: 3000 },
-];
-
-const PLOT_UNLOCK_COSTS = [50, 150, 400, 1000, 2200, 5000, 11000, 25000];
-
-// ═══════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════
-const state = {
-  coins: 20,
-  totalEarned: 0,
-  plots: [],      // { cropIdx: -1 | n, plantTime: null | ms }
-  plotCount: 4,
-  autoHarvest: false,
-  speedLevel: 0,  // 0-8, each level -10% grow time
-  coinLevel: 0,   // 0-5, each level +20% yield
+// ══════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════
+const RARITY = {
+  R:   { label:'R',   emoji:'👨‍💻', speedR:[1,3],  staminaR:[2,5],  qualityR:[1,3]  },
+  SR:  { label:'SR',  emoji:'🧑‍💻', speedR:[3,6],  staminaR:[5,8],  qualityR:[3,6]  },
+  SSR: { label:'SSR', emoji:'🥷',  speedR:[6,10], staminaR:[7,10], qualityR:[6,10] },
 };
 
-// Which crop picker is targeting
-let pickerPlotIdx = -1;
+const POOL_RATES = [
+  [0.05, 0.25, 0.70],
+  [0.08, 0.32, 0.60],
+  [0.12, 0.38, 0.50],
+  [0.18, 0.44, 0.38],
+  [0.25, 0.50, 0.25],
+];
+const POOL_UPGRADE_COSTS = [200, 500, 1200, 3000];
+const PULL_COST_1  = 50;
+const PULL_COST_10 = 450;
+const WORKSTATION_COSTS = [150, 400, 1000, 2500, 6000, 15000];
+const EMP_NAMES = ['张三','李四','王五','赵六','陈七','刘八','小明','小红','大壮','萌萌',
+                   '阿强','小花','老王','小李','阿明','彩虹','阿豪','静静','小杰','大牛'];
 
-// ═══════════════════════════════════════
+const DISTRACT_DUR = 12; // fixed seconds per distraction episode
+const TICK_SEC     = 0.1;
+const WORK_START   = 10 / 24;  // 10:00 AM (PM only)
+const WORK_END     = 20 / 24;  // 20:00 PM (PM only, triggers log)
+const OFF_SPEED    = 6;        // time multiplier during off-hours
+
+// Per-rarity work-hour ranges [startMin, startMax, endMin, endMax] in 24h fractions
+const RARITY_SCHEDULE = {
+  R:   { start: [10/24, 12/24], end: [17/24, 20/24] },  // 最晚到最早走
+  SR:  { start: [ 9/24, 11/24], end: [19/24, 21/24] },  // 基本准时
+  SSR: { start: [8.5/24, 10/24], end: [20/24, 22/24] }, // 卷王，早来晚走
+};
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+const state = {
+  money: 500,
+  totalEarned: 0,
+  // Day system
+  dayCount: 1,
+  dayProgress: 0,      // 0..1
+  dayDuration: 120,    // real seconds per in-game day
+  // Req pool
+  reqPool: 5,          // start with 5 so employees can work immediately
+  reqPoolMax: 20,
+  reqPerDay: 5,
+  reqAccumulator: 0,   // fractional accumulator for smooth generation
+  reqSent: 0,
+  // Bonuses
+  qualityBonus: 0,     // +20% per shop level
+  equipBonus: 0,       // +1 speed per shop level
+  focusBonus: 0,       // +8s focus duration per shop level
+  // Meta
+  workstationCount: 4,
+  poolLevel: 0,        // gacha pool upgrade level
+  shopLevels: { pm_output: 0, quality_bonus: 0, equipment: 0, workstation: 0, focus_train: 0 },
+  employees: [],
+  empIdCounter: 0,
+  // Time & work phase
+  workPhase: 'working',   // 'working' | 'offduty'
+  // Temp day modifiers (reset each midnight)
+  reqValueBonus: 0,
+  // Pending events for current day [{triggerAt, evtId, empId}]
+  pendingEvents: [],
+  // Daily stats (reset each day-end)
+  dayStats: { reqs: 0, earned: 0, zoned: 0, snaps: 0, eventCount: 0 },
+  // Log
+  logs: [],
+  // Product releases
+  totalReqs: 0,         // lifetime completed requirements
+  releaseCount: 0,      // how many versions shipped
+  releaseValueBonus: 0, // permanent req value multiplier (0.05 per release, max 0.8)
+};
+
+// Projectile queue (limit to one per 400ms for readability)
+let projQueue = [];
+let projTimer  = 0;
+
+// ══════════════════════════════════════════
+//  EMPLOYEE FACTORY
+// ══════════════════════════════════════════
+function ri(lo, hi) { return Math.floor(Math.random() * (hi - lo + 1)) + lo; }
+
+function createEmployee(rarity) {
+  const cfg  = RARITY[rarity];
+  const id   = state.empIdCounter++;
+  const used = new Set(state.employees.map(e => e.name));
+  const pool = EMP_NAMES.filter(n => !used.has(n));
+  const name = pool.length ? pool[Math.floor(Math.random() * pool.length)] : `员工${id}`;
+  const emp = {
+    id, name, rarity, emoji: cfg.emoji,
+    speed:   ri(...cfg.speedR),
+    stamina: ri(...cfg.staminaR),
+    quality: ri(...cfg.qualityR),
+    state: 'idle',
+    reqWorkNeeded: 0,
+    reqWorkDone:   0,
+    workProgress:  0,
+    focusMax:      0,
+    focusTimer:    0,
+    distractTimer: 0,
+    snapPenalty:   0,
+    isZoned:       false,
+    workStart:     WORK_START,
+    workEnd:       WORK_END,
+    tempSpeed:     0,   // day-temp speed modifier
+    tempQuality:   0,   // day-temp quality modifier
+    distractBoost: 0,   // day-temp extra zoned probability
+  };
+  randomizeEmpSchedule(emp);
+  return emp;
+}
+
+function pullRarity() {
+  const [ssr, sr] = POOL_RATES[state.poolLevel];
+  const r = Math.random();
+  if (r < ssr)       return 'SSR';
+  if (r < ssr + sr)  return 'SR';
+  return 'R';
+}
+
+// ══════════════════════════════════════════
 //  HELPERS
-// ═══════════════════════════════════════
-function effectiveGrowMs(cropIdx) {
-  const base = CROPS[cropIdx].growSec * 1000;
-  return Math.round(base * Math.pow(0.9, state.speedLevel));
+// ══════════════════════════════════════════
+function isWorkTime() {
+  return state.dayProgress >= WORK_START && state.dayProgress < WORK_END;
 }
 
-function effectiveYield(cropIdx) {
-  const base = CROPS[cropIdx].yield;
-  return Math.round(base * Math.pow(1.2, state.coinLevel));
+function fmtTime(frac) {
+  const h = Math.floor(frac * 24);
+  const m = Math.floor((frac * 24 - h) * 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
-function isCropUnlocked(cropIdx) {
-  return state.totalEarned >= CROPS[cropIdx].unlock;
+function getGameTime() { return fmtTime(state.dayProgress); }
+
+function isEmpWorkTime(emp) {
+  return state.dayProgress >= emp.workStart && state.dayProgress < emp.workEnd;
 }
 
-function hasReadyPlot() {
-  return state.plots.some(p => {
-    if (p.cropIdx < 0 || p.plantTime === null) return false;
-    return Date.now() - p.plantTime >= effectiveGrowMs(p.cropIdx);
-  });
+function randomizeEmpSchedule(emp) {
+  const cfg = RARITY_SCHEDULE[emp.rarity];
+  // Pool influence: full pool → start earlier & end later; empty → opposite
+  const poolFill  = state.reqPool / state.reqPoolMax;
+  const poolShift = (poolFill - 0.5) * (1.5 / 24); // ±45min max
+  const [s0, s1]  = cfg.start;
+  const [e0, e1]  = cfg.end;
+  emp.workStart = Math.max(7/24, Math.min(13/24, s0 + Math.random() * (s1 - s0) - poolShift));
+  emp.workEnd   = Math.max(15/24, Math.min(23/24, e0 + Math.random() * (e1 - e0) + poolShift));
 }
 
-function formatTime(ms) {
-  const s = Math.ceil(ms / 1000);
-  if (s < 60) return s + 's';
-  const m = Math.floor(s / 60), rs = s % 60;
-  return m + 'm' + (rs ? rs + 's' : '');
+function randomizeAllEmpSchedules() {
+  state.employees.forEach(emp => randomizeEmpSchedule(emp));
 }
 
-// ═══════════════════════════════════════
-//  INIT PLOTS
-// ═══════════════════════════════════════
-function initPlots() {
-  state.plots = [];
-  for (let i = 0; i < 12; i++) state.plots.push({ cropIdx: -1, plantTime: null });
+function effectiveSpeed(emp) { return Math.max(1, emp.speed + state.equipBonus + (emp.tempSpeed || 0)); }
+
+// Pure focus-seconds needed per req (max 30s = ~0.25 day, min capped by speed)
+function reqWorkSec(emp) { return Math.max(30, 120 / effectiveSpeed(emp)); }
+
+// Revenue per completed req
+function reqValue(emp) {
+  const q = Math.max(1, emp.quality + (emp.tempQuality || 0));
+  return Math.round((8 + q * 3) * (1 + state.qualityBonus + (state.reqValueBonus || 0) + (state.releaseValueBonus || 0)));
 }
 
-// ═══════════════════════════════════════
-//  RENDER GRID
-// ═══════════════════════════════════════
-function renderGrid() {
-  const grid = document.getElementById('farm-grid');
-  grid.innerHTML = '';
+// Focus window duration
+function focusDuration(emp) { return emp.stamina * 8 + state.focusBonus; }
 
-  for (let i = 0; i < state.plotCount; i++) {
-    const p = state.plots[i];
-    const div = document.createElement('div');
-    div.className = 'plot';
-    div.dataset.idx = i;
+function idleEmployees()      { return state.employees.filter(e => e.state === 'idle'); }
+function focusingEmployees()  { return state.employees.filter(e => e.state === 'focusing'); }
+function distractedEmployees(){ return state.employees.filter(e => e.state === 'distracted'); }
 
-    if (p.cropIdx < 0) {
-      // Empty
-      div.classList.add('empty');
-      div.innerHTML = `<span class="plot-add-icon">＋</span><span class="plot-label">点击种植</span>`;
-    } else {
-      const crop = CROPS[p.cropIdx];
-      const growMs = effectiveGrowMs(p.cropIdx);
-      const elapsed = Date.now() - p.plantTime;
-      const ready = elapsed >= growMs;
-      const pct = Math.min(1, elapsed / growMs);
+// ══════════════════════════════════════════
+//  ASSIGN REQ FROM POOL
+// ══════════════════════════════════════════
+function assignReq(emp) {
+  state.reqPool--;
+  state.reqSent++;
+  emp.state        = 'focusing';
+  emp.reqWorkDone  = 0;
+  emp.reqWorkNeeded= reqWorkSec(emp);
+  emp.focusMax     = focusDuration(emp);
+  emp.focusTimer   = emp.focusMax;
+  emp.distractTimer= 0;
+  emp.workProgress = 0;
+  projQueue.push(emp.id);
+}
 
-      div.classList.add(ready ? 'ready' : 'growing');
-      div.innerHTML = `
-        <span class="plot-emoji">${crop.emoji}</span>
-        <span class="plot-label">${ready ? '可收获！' : formatTime(growMs - elapsed)}</span>
-        <div class="plot-progress-wrap">
-          <div class="plot-progress-bar" style="width:${Math.round(pct*100)}%"></div>
-        </div>`;
-    }
+function assignReqs() {
+  const idle = state.employees.filter(e => e.state === 'idle' && isEmpWorkTime(e));
+  for (const emp of idle) {
+    if (state.reqPool <= 0) break;
+    assignReq(emp);
+  }
+}
 
-    div.addEventListener('click', () => onPlotClick(i));
-    grid.appendChild(div);
+// ══════════════════════════════════════════
+//  COMPLETE REQ
+// ══════════════════════════════════════════
+// ── Product Release Milestones ─────────────────────────────────
+const MILESTONES = [10, 25, 50, 100, 175, 275, 400, 550, 750, 1000];
+
+function getNextMilestoneReqs() {
+  const idx = state.releaseCount;
+  if (idx < MILESTONES.length) return MILESTONES[idx];
+  return MILESTONES[MILESTONES.length - 1] + (idx - MILESTONES.length + 1) * 300;
+}
+
+function checkMilestone() {
+  const needed = getNextMilestoneReqs();
+  if (state.totalReqs < needed) return;
+  state.releaseCount++;
+  const bonus = Math.round(800 * Math.pow(1.8, state.releaseCount - 1));
+  state.releaseValueBonus = Math.min(state.releaseValueBonus + 0.05, 0.8);
+  state.money       += bonus;
+  state.totalEarned += bonus;
+  triggerRelease(bonus);
+}
+
+function triggerRelease(bonus) {
+  const ver = `v${state.releaseCount}.0`;
+  const entry = {
+    type: 'event', day: state.dayCount, time: getGameTime(),
+    icon: '🚀', title: `${ver} 正式发布！`,
+    desc: `累计完成 ${state.totalReqs} 个需求，获得 ${bonus}💰 奖励，收益加成 +${Math.round(state.releaseValueBonus * 100)}%`
+  };
+  state.logs.unshift(entry);
+  if (state.logs.length > 50) state.logs.pop();
+  renderLogPanel();
+  showReleaseOverlay(ver, bonus);
+  const pm = document.getElementById('pm-char');
+  if (pm) {
+    const r = pm.getBoundingClientRect();
+    spawnFloat(`🚀 ${ver}`, r.left + r.width / 2, r.top - 20, '#a78bfa', '16px');
+  }
+}
+
+function showReleaseOverlay(ver, bonus) {
+  const el = document.createElement('div');
+  el.id = 'release-overlay';
+  el.innerHTML = `
+    <div id="release-card">
+      <div id="release-emoji">🚀</div>
+      <div id="release-ver">${ver} 正式发布！</div>
+      <div id="release-stats">
+        <div>共完成 <b>${state.totalReqs}</b> 个需求</div>
+        <div>奖励 <b style="color:#fde68a">+${bonus}💰</b></div>
+        <div>永久收益加成 <b style="color:#a78bfa">+${Math.round(state.releaseValueBonus * 100)}%</b></div>
+      </div>
+      <div id="release-next">下一版本：再完成 ${getNextMilestoneReqs() - state.totalReqs} 个需求</div>
+    </div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+// ───────────────────────────────────────────────────────────────
+
+function completeReq(emp) {
+  const earned = reqValue(emp);
+  state.money       += earned;
+  state.totalEarned += earned;
+
+  const empEl = document.querySelector(`.emp-card[data-emp-id="${emp.id}"]`);
+  if (empEl) {
+    const rect = empEl.getBoundingClientRect();
+    spawnFloat(`+${earned}💰`, rect.left + rect.width / 2, rect.top + 10);
   }
 
-  // "Unlock plot" button if there are more to unlock
-  if (state.plotCount < 12) {
-    const nextCost = PLOT_UNLOCK_COSTS[state.plotCount - 4] ?? 99999;
-    const div = document.createElement('div');
-    div.className = 'plot empty';
-    div.style.borderStyle = 'dashed';
-    div.style.opacity = '0.6';
-    div.innerHTML = `<span class="plot-add-icon" style="font-size:20px">🔓</span><span class="plot-label" style="font-size:8px">解锁 💰${nextCost}</span>`;
-    div.addEventListener('click', () => {
-      if (state.coins >= nextCost) {
-        state.coins -= nextCost;
-        state.plotCount++;
-        updateUI();
-        renderGrid();
-        showToast('🌱 新土地已解锁！');
-      } else {
-        showToast(`金币不足，需要 ${nextCost} 💰`);
-      }
-    });
-    grid.appendChild(div);
+  emp.state        = 'idle';
+  emp.reqWorkDone  = 0;
+  emp.reqWorkNeeded= 0;
+  emp.workProgress = 0;
+  emp.focusTimer   = 0;
+  emp.distractTimer= 0;
+  emp.snapPenalty  = 0; // reset penalty after each req
+  state.dayStats.reqs++;
+  state.dayStats.earned += earned;
+  state.totalReqs++;
+  checkMilestone();
+  updateTopUI();
+}
+
+// ══════════════════════════════════════════
+//  RANDOM EVENTS
+// ══════════════════════════════════════════
+// Each event: { id, icon, w(weight), emp(needs employee?), gen(emp?) → {title,desc,apply} }
+const EVENTS = [
+  // ── 员工个人事件 ──
+  { id:'sick',       icon:'🤒', w:10, emp:true,
+    gen: e => ({ title:`${e.name} 今日请病假`, desc:'身体不适，无法上班',
+      apply: e => { e.workEnd = e.workStart; } }) },
+
+  { id:'energized',  icon:'💪', w:14, emp:true,
+    gen: e => ({ title:`${e.name} 状态大爆发！`, desc:'今日速度+2，干劲满满',
+      apply: e => { e.tempSpeed += 2; } }) },
+
+  { id:'birthday',   icon:'🎂', w:6,  emp:true,
+    gen: e => { const g = 20 + ri(0, 30);
+      return { title:`今天是 ${e.name} 的生日！`, desc:`发红包 +${g}g，今日质量+2`,
+        apply: e => { e.tempQuality += 2; state.money += g; state.totalEarned += g; } }; } },
+
+  { id:'late_night', icon:'😴', w:12, emp:true,
+    gen: e => ({ title:`${e.name} 昨晚熬夜`, desc:'今日迟到1小时，速度-1',
+      apply: e => { e.workStart = Math.min(e.workEnd - 1/24, e.workStart + 1/24); e.tempSpeed = Math.max(e.tempSpeed - 1, 1 - e.speed); } }) },
+
+  { id:'phone',      icon:'📱', w:11, emp:true,
+    gen: e => ({ title:`${e.name} 今天手机上瘾`, desc:'深度走神概率大幅提升',
+      apply: e => { e.distractBoost += 0.32; } }) },
+
+  { id:'praised',    icon:'🌟', w:10, emp:true,
+    gen: e => ({ title:`${e.name} 受到主管当众表扬`, desc:'今日质量+3，心情大好',
+      apply: e => { e.tempQuality += 3; } }) },
+
+  { id:'heartbreak', icon:'💔', w:7,  emp:true,
+    gen: e => ({ title:`${e.name} 失恋了`, desc:'情绪低落，质量-2，但用工作麻痹自己（推迟下班1h）',
+      apply: e => { e.tempQuality -= 2; e.workEnd = Math.min(23/24, e.workEnd + 1/24); } }) },
+
+  { id:'breakthrough', icon:'🏆', w:3, emp:true,
+    gen: e => { const attrs = ['speed','stamina','quality']; const k = attrs[ri(0,2)];
+      const label = {speed:'速度',stamina:'精力',quality:'质量'}[k];
+      return { title:`${e.name} 技术突破！（稀有）`, desc:`${label}永久+1`,
+        apply: e => { e[k] = Math.min(10, e[k] + 1); } }; } },
+
+  { id:'overtime',   icon:'👻', w:6,  emp:true,
+    gen: e => ({ title:`${e.name} 主动申请加班`, desc:'今日下班推迟2小时',
+      apply: e => { e.workEnd = Math.min(23/24, e.workEnd + 2/24); } }) },
+
+  { id:'inspiration',icon:'💡', w:7,  emp:true,
+    gen: e => ({ title:`${e.name} 灵感爆发！`, desc:'速度+3，质量+3，今日飞速',
+      apply: e => { e.tempSpeed += 3; e.tempQuality += 3; } }) },
+
+  { id:'earlybird',  icon:'🐦', w:8,  emp:true,
+    gen: e => ({ title:`${e.name} 今日超早到岗`, desc:'提前1.5小时上班，精神饱满',
+      apply: e => { e.workStart = Math.max(7/24, e.workStart - 1.5/24); } }) },
+
+  { id:'argument',   icon:'🤬', w:6,  emp:true,
+    gen: e => ({ title:`${e.name} 和同事吵架了`, desc:'今日速度-1，质量-1，情绪极差',
+      apply: e => { e.tempSpeed -= 1; e.tempQuality -= 1; } }) },
+
+  // ── 全局正面事件 ──
+  { id:'takeout',    icon:'🍕', w:16, emp:false,
+    gen: () => { const g = ri(30, 70);
+      return { title:'公司今天订了外卖！', desc:`大家干劲十足，全员速度+1，+${g}g`,
+        apply: () => { state.money += g; state.totalEarned += g; state.employees.forEach(e => e.tempSpeed += 1); } }; } },
+
+  { id:'bonus',      icon:'💰', w:8,  emp:false,
+    gen: () => { const g = ri(80, 200);
+      return { title:'季度绩效奖金发放！', desc:`收到奖金 +${g}g`,
+        apply: () => { state.money += g; state.totalEarned += g; } }; } },
+
+  { id:'big_client', icon:'🤝', w:10, emp:false,
+    gen: () => { const n = ri(3, 6);
+      return { title:'签下大客户！', desc:`紧急涌入 ${n} 个需求`,
+        apply: () => { state.reqPool = Math.min(state.reqPoolMax, state.reqPool + n); } }; } },
+
+  { id:'ai_tool',    icon:'🤖', w:8,  emp:false,
+    gen: () => ({ title:'部署了 AI 辅助工具', desc:'今日全员速度+2',
+      apply: () => { state.employees.forEach(e => e.tempSpeed += 2); } }) },
+
+  { id:'launch',     icon:'🚀', w:6,  emp:false,
+    gen: () => ({ title:'产品顺利上线！全员庆功', desc:'今日所有需求收益+60%',
+      apply: () => { state.reqValueBonus += 0.6; } }) },
+
+  { id:'coffee',     icon:'☕', w:10, emp:false,
+    gen: () => ({ title:'新咖啡机到货！', desc:'全员深度走神概率降低',
+      apply: () => { state.employees.forEach(e => e.distractBoost -= 0.18); } }) },
+
+  { id:'aircon_broken', icon:'🥵', w:8, emp:false,
+    gen: () => ({ title:'空调坏了！室内酷热难耐', desc:'全员速度-1，质量-1，尽快来修',
+      apply: () => { state.employees.forEach(e => { e.tempSpeed -= 1; e.tempQuality -= 1; }); } }) },
+
+  // ── 全局负面事件 ──
+  { id:'server_down',icon:'🔧', w:9,  emp:false,
+    gen: () => { const n = ri(2, 4);
+      return { title:'服务器宕机！', desc:`${n} 个需求被迫中断，从需求池移除`,
+        apply: () => { state.reqPool = Math.max(0, state.reqPool - n); } }; } },
+
+  { id:'all_hands',  icon:'📣', w:10, emp:false,
+    gen: () => ({ title:'全员紧急大会', desc:'上午全部占用，所有员工今日推迟1小时上班',
+      apply: () => { state.employees.forEach(e => { e.workStart = Math.min(e.workEnd - 1/24, e.workStart + 1/24); }); } }) },
+
+  { id:'req_cut',    icon:'🗑️', w:9,  emp:false,
+    gen: () => { const n = ri(3, 6);
+      return { title:'产品方向大调整，需求被砍', desc:`需求池 -${n}，欲哭无泪`,
+        apply: () => { state.reqPool = Math.max(0, state.reqPool - n); } }; } },
+
+  { id:'rain',       icon:'🌧️', w:9,  emp:false,
+    gen: () => ({ title:'暴雨天气，出行困难', desc:'所有 R 级员工今日迟到1小时',
+      apply: () => { state.employees.filter(e => e.rarity==='R').forEach(e => {
+        e.workStart = Math.min(e.workEnd - 1/24, e.workStart + 1/24); }); } }) },
+
+  { id:'layoff',     icon:'📉', w:6,  emp:false,
+    gen: () => ({ title:'裁员传言弥漫公司', desc:'人人自危，全员速度+2（摸不了鱼）',
+      apply: () => { state.employees.forEach(e => e.tempSpeed += 2); } }) },
+
+  // ── 奇葩/稀有事件 ──
+  { id:'office_cat', icon:'🐱', w:7,  emp:false,
+    gen: () => ({ title:'办公室来了只流浪猫！', desc:'SR/SSR 员工喜不自胜（质量+2），R 员工被猫抓了（速度-1）',
+      apply: () => { state.employees.forEach(e => e.rarity==='R' ? e.tempSpeed-- : e.tempQuality += 2); } }) },
+
+  { id:'team_build', icon:'🎉', w:6,  emp:false,
+    gen: () => ({ title:'公司组织下午团建！', desc:'全员提前2小时下班',
+      apply: () => { state.employees.forEach(e => { e.workEnd = Math.max(e.workStart + 1/24, e.workEnd - 2/24); }); } }) },
+
+  { id:'p0',         icon:'🔥', w:7,  emp:false,
+    gen: () => { const n = ri(3, 5);
+      return { title:'线上 P0 级事故爆发！', desc:`紧急需求 +${n}，全员强制加班至21:00`,
+        apply: () => { state.reqPool = Math.min(state.reqPoolMax, state.reqPool + n);
+          state.employees.forEach(e => { e.workEnd = Math.max(e.workEnd, 21/24); }); } }; } },
+
+  { id:'mystery',    icon:'🎁', w:5,  emp:false,
+    gen: () => { const g = ri(50, 150);
+      return { title:'收到神秘快递…是钱！', desc:`+${g}g，来路不明但很开心`,
+        apply: () => { state.money += g; state.totalEarned += g; } }; } },
+
+  { id:'competition',icon:'⚔️', w:6,  emp:false,
+    gen: () => ({ title:'竞争对手发布新品！', desc:'公司全力应对，今日需求收益+40%，全员不得早退',
+      apply: () => { state.reqValueBonus += 0.4;
+        state.employees.forEach(e => { e.workEnd = Math.max(e.workEnd, WORK_END); }); } }) },
+
+  { id:'game_room',  icon:'🎮', w:6,  emp:false,
+    gen: () => ({ title:'HR 在茶水间放了游戏机', desc:'全员深度走神概率+20%，但没人愿意回家',
+      apply: () => { state.employees.forEach(e => { e.distractBoost += 0.2; e.workEnd = Math.min(23/24, e.workEnd + 0.5/24); }); } }) },
+
+  { id:'investor',   icon:'💎', w:4,  emp:false,
+    gen: () => { const g = ri(200, 400);
+      return { title:'投资人突然空降参观！', desc:`全员表现优异，拿到额外投资 +${g}g，今日收益+30%`,
+        apply: () => { state.money += g; state.totalEarned += g; state.reqValueBonus += 0.3; } }; } },
+];
+
+function scheduleEvents() {
+  // Reset day-temp modifiers at midnight
+  state.reqValueBonus = 0;
+  state.employees.forEach(e => { e.tempSpeed = 0; e.tempQuality = 0; e.distractBoost = 0; });
+
+  // Decide how many events today: 0→20%, 1→40%, 2→28%, 3→12%
+  const r = Math.random();
+  const count = r < 0.20 ? 0 : r < 0.60 ? 1 : r < 0.88 ? 2 : 3;
+  const usedIds = new Set();
+  const pending = [];
+
+  for (let i = 0; i < count; i++) {
+    const pool = EVENTS.filter(ev => !usedIds.has(ev.id) && (!ev.emp || state.employees.length > 0));
+    if (!pool.length) break;
+    const total = pool.reduce((s, ev) => s + ev.w, 0);
+    let pick = Math.random() * total;
+    const ev = pool.find(e => { pick -= e.w; return pick <= 0; }) || pool[pool.length - 1];
+    usedIds.add(ev.id);
+    const empId = ev.emp && state.employees.length > 0
+      ? state.employees[Math.floor(Math.random() * state.employees.length)].id
+      : null;
+    pending.push({ triggerAt: Math.random(), evtId: ev.id, empId });
   }
 
-  updateHarvestAllBtn();
+  pending.sort((a, b) => a.triggerAt - b.triggerAt);
+  state.pendingEvents = pending;
 }
 
-function updateHarvestAllBtn() {
-  document.getElementById('btn-harvest-all').disabled = !hasReadyPlot();
+function fireEvent(pending) {
+  const ev = EVENTS.find(e => e.id === pending.evtId);
+  if (!ev) return;
+  const emp = pending.empId !== null ? state.employees.find(e => e.id === pending.empId) : null;
+  if (ev.emp && !emp) return; // employee was fired before event triggered
+
+  const result = ev.gen(emp);
+  result.apply(emp || undefined);
+  state.dayStats.eventCount++;
+
+  // Add live event entry to log
+  const entry = { type: 'event', day: state.dayCount, time: getGameTime(), icon: ev.icon, title: result.title, desc: result.desc };
+  state.logs.unshift(entry);
+  if (state.logs.length > 50) state.logs.pop();
+  renderLogPanel();
+
+  // Float FX near PM
+  const pmEl = document.getElementById('pm-char');
+  if (pmEl) {
+    const rect = pmEl.getBoundingClientRect();
+    spawnFloat(`${ev.icon} ${result.title}`, rect.left + rect.width / 2, rect.top - 16, '#fde68a', '11px');
+  }
 }
 
-// ═══════════════════════════════════════
-//  PLOT CLICK
-// ═══════════════════════════════════════
-function onPlotClick(idx) {
-  const p = state.plots[idx];
-  if (p.cropIdx < 0) {
-    // Open seed picker
-    pickerPlotIdx = idx;
-    openSeedPicker();
+// ══════════════════════════════════════════
+//  THEME
+// ══════════════════════════════════════════
+function applyTheme(isWork) {
+  const bgDay   = document.getElementById('bg-day');
+  const bgNight = document.getElementById('bg-night');
+  if (bgDay)   bgDay.style.opacity   = isWork ? '1' : '0';
+  if (bgNight) bgNight.style.opacity = isWork ? '0' : '1';
+  if (isWork) document.body.classList.remove('night-mode');
+  else        document.body.classList.add('night-mode');
+}
+
+// ══════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════
+function generateDayLog() {
+  const d = state.dayStats;
+  const n = state.employees.length;
+  const lines = [];
+  if (d.reqs > 0) lines.push(`✅ 完成需求 ${d.reqs} 个，收益 ${d.earned}g`);
+  else            lines.push('⚠️ 今日无需求完成');
+  lines.push(`👥 在岗员工 ${n} 人 | 需求池余量 ${state.reqPool}`);
+  if (d.zoned > 0) {
+    const snapTxt = d.snaps > 0 ? `，被唤醒 ${d.snaps} 次` : '，均未被唤醒';
+    lines.push(`😴 深度走神 ${d.zoned} 次${snapTxt}`);
+  }
+  if (d.eventCount > 0) lines.push(`🎲 今日发生 ${d.eventCount} 起随机事件`);
+  if (n === 0) lines.push('💡 快去招募第一位员工吧！');
+
+  state.logs.unshift({ type: 'summary', day: state.dayCount, lines });
+  if (state.logs.length > 50) state.logs.pop();
+  state.dayStats = { reqs: 0, earned: 0, zoned: 0, snaps: 0, eventCount: 0 };
+  renderLogPanel();
+}
+
+function renderLogPanel() {
+  const el = document.getElementById('log-entries');
+  if (!el) return;
+  if (!state.logs.length) {
+    el.innerHTML = '<div class="log-placeholder">每天会在此实时记录<br>随机事件与下班汇报</div>';
     return;
   }
-  const growMs = effectiveGrowMs(p.cropIdx);
-  const ready = Date.now() - p.plantTime >= growMs;
-  if (ready) {
-    harvest(idx);
-  } else {
-    const rem = growMs - (Date.now() - p.plantTime);
-    showToast(`${CROPS[p.cropIdx].name} 还需 ${formatTime(rem)}`);
-  }
-}
-
-// ═══════════════════════════════════════
-//  PLANT & HARVEST
-// ═══════════════════════════════════════
-function plant(plotIdx, cropIdx) {
-  if (state.coins < CROPS[cropIdx].cost) { showToast('金币不足！'); return; }
-  state.coins -= CROPS[cropIdx].cost;
-  state.plots[plotIdx] = { cropIdx, plantTime: Date.now() };
-  closeSeedPicker();
-  renderGrid();
-  updateUI();
-}
-
-function harvest(plotIdx) {
-  const p = state.plots[plotIdx];
-  if (p.cropIdx < 0) return;
-  const growMs = effectiveGrowMs(p.cropIdx);
-  if (Date.now() - p.plantTime < growMs) return;
-
-  const earned = effectiveYield(p.cropIdx);
-  state.coins += earned;
-  state.totalEarned += earned;
-  state.plots[plotIdx] = { cropIdx: -1, plantTime: null };
-
-  // FX
-  const plotEl = document.querySelector(`.plot[data-idx="${plotIdx}"]`);
-  if (plotEl) spawnHarvestFX(plotEl, earned);
-
-  // Check crop unlocks
-  checkUnlocks();
-
-  renderGrid();
-  updateUI();
-}
-
-function harvestAll() {
-  let count = 0;
-  for (let i = 0; i < state.plotCount; i++) {
-    const p = state.plots[i];
-    if (p.cropIdx < 0 || p.plantTime === null) continue;
-    if (Date.now() - p.plantTime >= effectiveGrowMs(p.cropIdx)) {
-      const earned = effectiveYield(p.cropIdx);
-      state.coins += earned;
-      state.totalEarned += earned;
-      state.plots[i] = { cropIdx: -1, plantTime: null };
-      count++;
-    }
-  }
-  if (count > 0) {
-    checkUnlocks();
-    renderGrid();
-    updateUI();
-    showToast(`🌟 收获了 ${count} 块地的作物！`);
-  }
-}
-
-// ═══════════════════════════════════════
-//  UNLOCK CHECK
-// ═══════════════════════════════════════
-const prevUnlocked = new Set([0, 1]);
-function checkUnlocks() {
-  CROPS.forEach((c, i) => {
-    if (!prevUnlocked.has(i) && state.totalEarned >= c.unlock) {
-      prevUnlocked.add(i);
-      showUnlockBadge(c.emoji, c.name);
-    }
-  });
-}
-
-function showUnlockBadge(emoji, name) {
-  const el = document.createElement('div');
-  el.className = 'unlock-badge';
-  el.innerHTML = `<div style="font-size:32px">${emoji}</div><div style="font-size:15px;margin-top:4px">解锁：${name}！</div>`;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2200);
-}
-
-// ═══════════════════════════════════════
-//  SEED PICKER
-// ═══════════════════════════════════════
-function openSeedPicker() {
-  const grid = document.getElementById('seed-grid');
-  grid.innerHTML = '';
-  CROPS.forEach((c, i) => {
-    const unlocked = isCropUnlocked(i);
-    const canAfford = state.coins >= c.cost;
-    const div = document.createElement('div');
-    div.className = 'seed-card' + (!unlocked ? ' locked' : !canAfford ? ' cant-afford' : '');
-    div.innerHTML = `
-      <span class="seed-emoji">${c.emoji}</span>
-      <div class="seed-info">
-        <div class="seed-name">${c.name}</div>
-        <div class="seed-cost">💰 ${c.cost} 金币</div>
-        <div class="seed-time">⏱ ${formatTime(effectiveGrowMs(i) )}</div>
-        <div class="seed-yield">+${effectiveYield(i)} 收益</div>
-        ${!unlocked ? `<div class="seed-lock-label">🔒 需总收益 ${c.unlock}</div>` : ''}
+  el.innerHTML = state.logs.map(entry => {
+    if (entry.type === 'event') {
+      return `<div class="log-entry log-entry-event">
+        <div class="log-day-ev">🔔 第${entry.day}天 ${entry.time}</div>
+        <div class="log-event-title">${entry.icon} ${entry.title}</div>
+        <div class="log-event-desc">${entry.desc}</div>
       </div>`;
-    if (unlocked && canAfford) {
-      div.addEventListener('click', () => plant(pickerPlotIdx, i));
     }
-    grid.appendChild(div);
-  });
-  document.getElementById('seed-overlay').classList.remove('hidden');
+    return `<div class="log-entry">
+      <div class="log-day">第 ${entry.day} 天 · 下班汇报</div>
+      ${entry.lines.map(l => `<div class="log-line">${l}</div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
-function closeSeedPicker() {
-  document.getElementById('seed-overlay').classList.add('hidden');
+// ══════════════════════════════════════════
+//  RENDER SCENE
+// ══════════════════════════════════════════
+function renderScene() {
+  const area = document.getElementById('emp-area');
+  area.innerHTML = '';
+
+  const hint = document.createElement('div');
+  hint.id = 'no-emp-hint';
+  hint.innerHTML = '点击上方「招募」<br>召唤你的第一位员工';
+  hint.style.display = state.employees.length === 0 ? 'block' : 'none';
+  area.appendChild(hint);
+
+  state.employees.forEach(emp => area.appendChild(buildEmpCard(emp)));
+
+  const empty = state.workstationCount - state.employees.length;
+  for (let i = 0; i < empty; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'emp-slot-empty';
+    slot.innerHTML = `<span class="slot-icon">🖥️</span><span>空工位</span>`;
+    area.appendChild(slot);
+  }
+  updateInfoBar();
 }
 
-// ═══════════════════════════════════════
+function getStateLabel(emp) {
+  if (!isEmpWorkTime(emp)) {
+    if (state.dayProgress < emp.workStart)
+      return `⏰ ${fmtTime(emp.workStart)} 上班`;
+    return `🏠 明日 ${fmtTime(emp.workStart)} 上班`;
+  }
+  if (emp.state === 'idle')       return '⏳ 待命中';
+  if (emp.state === 'focusing')   return `🎯 专注中 ${Math.ceil(Math.max(0, emp.focusTimer))}s`;
+  if (emp.state === 'distracted') return emp.isZoned ? '😴 深度走神' : `💤 走神了 ${Math.ceil(Math.max(0, emp.distractTimer))}s`;
+  return '';
+}
+
+function buildEmpCard(emp) {
+  const div = document.createElement('div');
+  div.className = `emp-card rarity-${emp.rarity} state-${emp.state}${emp.isZoned ? ' is-zoned' : ''}`;
+  div.dataset.empId = emp.id;
+
+  const wPct = Math.round(emp.workProgress * 100);
+  let focusPct = 0, focusBarClass = 'bar-fill bar-focus-active emp-focus-bar';
+  if (emp.state === 'focusing' && emp.focusMax > 0) {
+    focusPct = Math.round((1 - emp.focusTimer / emp.focusMax) * 100);
+  } else if (emp.state === 'distracted') {
+    focusPct = Math.round((emp.distractTimer / DISTRACT_DUR) * 100);
+    focusBarClass = 'bar-fill bar-distract emp-focus-bar';
+  }
+
+  div.innerHTML = `
+    <div class="emp-card-top">
+      <span class="emp-rarity">${emp.rarity}</span>
+      <span class="emp-name">${emp.name}</span>
+      <span class="emp-emoji">${emp.emoji}</span>
+      <button class="emp-manage-btn" data-manage-id="${emp.id}" title="员工管理">⚙</button>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label-row"><span>需求进度</span><span class="emp-work-pct">${wPct}%</span></div>
+      <div class="bar-track"><div class="bar-fill bar-work emp-work-bar" style="width:${wPct}%"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label-row"><span class="emp-focus-label">${emp.state === 'distracted' ? '走神倒计时' : '专注窗口'}</span></div>
+      <div class="bar-track"><div class="${focusBarClass}" style="width:${focusPct}%"></div></div>
+    </div>
+    <div class="emp-stats">
+      <div class="emp-stat-item"><span class="emp-stat-num emp-spd-num">${effectiveSpeed(emp)}</span>速度</div>
+      <div class="emp-stat-item"><span class="emp-stat-num">${emp.stamina}</span>精力</div>
+      <div class="emp-stat-item"><span class="emp-stat-num">${emp.quality}</span>质量</div>
+    </div>
+    <span class="emp-state-badge">${getStateLabel(emp)}</span>`;
+  return div;
+}
+
+function updateEmpCard(emp) {
+  const div = document.querySelector(`.emp-card[data-emp-id="${emp.id}"]`);
+  if (!div) return;
+
+  const offDuty = !isEmpWorkTime(emp);
+  div.className = `emp-card rarity-${emp.rarity} state-${offDuty ? 'idle' : emp.state}${(!offDuty && emp.isZoned) ? ' is-zoned' : ''}${offDuty ? ' off-duty' : ''}`;
+
+  const wPct = Math.round(emp.workProgress * 100);
+  let focusPct = 0, focusBarClass = 'bar-fill bar-focus-active emp-focus-bar';
+  if (!offDuty && emp.state === 'focusing' && emp.focusMax > 0) {
+    focusPct = Math.round((1 - emp.focusTimer / emp.focusMax) * 100);
+  } else if (!offDuty && emp.state === 'distracted') {
+    focusPct = emp.isZoned ? 100 : Math.round((emp.distractTimer / DISTRACT_DUR) * 100);
+    focusBarClass = 'bar-fill bar-distract emp-focus-bar';
+  }
+
+  const wBar  = div.querySelector('.emp-work-bar');
+  const fBar  = div.querySelector('.emp-focus-bar');
+  const wPctEl= div.querySelector('.emp-work-pct');
+  const badge = div.querySelector('.emp-state-badge');
+  const fLbl  = div.querySelector('.emp-focus-label');
+  const spdEl = div.querySelector('.emp-spd-num');
+
+  if (wBar)  wBar.style.width  = wPct + '%';
+  if (fBar)  { fBar.style.width = focusPct + '%'; fBar.className = focusBarClass; }
+  if (wPctEl) wPctEl.textContent = wPct + '%';
+  if (badge)  badge.textContent  = getStateLabel(emp);
+  if (fLbl)   fLbl.textContent   = emp.state === 'distracted' ? '走神倒计时' : '专注窗口';
+  if (spdEl)  spdEl.textContent  = effectiveSpeed(emp);
+}
+
+// ══════════════════════════════════════════
+//  DAY RING & POOL DISPLAY
+// ══════════════════════════════════════════
+function updateDayRing() {
+  const deg    = Math.round(state.dayProgress * 360);
+  const work   = isWorkTime();
+  const color  = work ? '#a855f7' : '#3b5068';
+  const ring   = document.getElementById('pm-ring');
+  ring.style.background = `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.06) 0deg)`;
+  document.getElementById('day-count').textContent  = state.dayCount;
+  document.getElementById('pm-time').textContent    = getGameTime();
+  document.getElementById('pm-sub').textContent     = work ? '工作中 🧑‍💼' : '已下班 🌙';
+  document.getElementById('info-day').textContent   = `第${state.dayCount}天 ${getGameTime()}`;
+}
+
+function updatePoolDisplay() {
+  const pct = Math.round((state.reqPool / state.reqPoolMax) * 100);
+  document.getElementById('stat-pool').textContent    = `${state.reqPool}/${state.reqPoolMax}`;
+  document.getElementById('pool-bar').style.width     = pct + '%';
+  document.getElementById('info-pool').textContent    = `📋 池: ${state.reqPool}/${state.reqPoolMax}`;
+}
+
+function updateInfoBar() {
+  document.getElementById('info-idle').textContent       = `⏳ 待命: ${idleEmployees().length}`;
+  document.getElementById('info-focusing').textContent   = `🎯 专注: ${focusingEmployees().length}`;
+  document.getElementById('info-distracted').textContent = `💤 走神: ${distractedEmployees().length}`;
+}
+
+function updateTopUI() {
+  document.getElementById('money-val').textContent    = state.money;
+  document.getElementById('total-val').textContent    = state.totalEarned;
+  document.getElementById('stat-output').textContent  = `${state.reqPerDay}/天`;
+  document.getElementById('stat-emp-count').textContent = state.employees.length;
+  const next = getNextMilestoneReqs();
+  const ver  = `v${state.releaseCount + 1}.0`;
+  document.getElementById('milestone-display').textContent = `🚀 ${ver}: ${state.totalReqs}/${next}`;
+}
+
+// ══════════════════════════════════════════
+//  EFFECTS
+// ══════════════════════════════════════════
+function spawnFloat(text, x, y, color, size) {
+  const el = document.createElement('div');
+  el.className  = 'float-text';
+  el.textContent= text;
+  el.style.left = (x - 20) + 'px';
+  el.style.top  = y + 'px';
+  if (color) el.style.color = color;
+  if (size)  el.style.fontSize = size;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+
+function spawnDayFX() {
+  const pmEl = document.getElementById('pm-char');
+  if (!pmEl) return;
+  const rect = pmEl.getBoundingClientRect();
+  spawnFloat(`☀️ 第${state.dayCount}天`, rect.left + rect.width / 2, rect.top - 10, '#c084fc', '12px');
+  pmEl.classList.remove('sending');
+  void pmEl.offsetWidth;
+  pmEl.classList.add('sending');
+}
+
+function spawnPoolAddFX() {
+  const pmEl = document.getElementById('pm-char');
+  if (!pmEl) return;
+  const rect = pmEl.getBoundingClientRect();
+  spawnFloat('📋+1', rect.left + rect.width / 2, rect.bottom - 5, '#c084fc', '11px');
+}
+
+// ══════════════════════════════════════════
+//  PROJECTILE
+// ══════════════════════════════════════════
+function fireProjectile(targetEmpId) {
+  const pmEl  = document.getElementById('pm-char');
+  const empEl = document.querySelector(`.emp-card[data-emp-id="${targetEmpId}"]`);
+  if (!pmEl || !empEl) return;
+
+  const pmRect  = pmEl.getBoundingClientRect();
+  const empRect = empEl.getBoundingClientRect();
+  const startX  = pmRect.right;
+  const startY  = pmRect.top + pmRect.height / 2;
+  const endX    = empRect.left + empRect.width * 0.55;
+  const endY    = empRect.top  + empRect.height * 0.2;
+  const dx = endX - startX, dy = endY - startY;
+  const midY = -Math.abs(dx) * 0.25;
+
+  const proj = document.createElement('div');
+  proj.className  = 'req-proj';
+  proj.textContent= '📋';
+  proj.style.left = startX + 'px';
+  proj.style.top  = startY + 'px';
+  document.body.appendChild(proj);
+
+  proj.animate([
+    { transform: `translate(0,0) scale(1) rotate(0deg)`,                                  opacity: 1, offset: 0    },
+    { transform: `translate(${dx*0.45}px,${dy*0.5+midY}px) scale(1.15) rotate(-20deg)`,  opacity: 1, offset: 0.45 },
+    { transform: `translate(${dx}px,${dy}px) scale(0.75) rotate(-35deg)`,                 opacity: 0.85, offset: 1 },
+  ], { duration: 480, easing: 'ease-in-out', fill: 'forwards' }).onfinish = () => {
+    proj.remove();
+    empEl.classList.add('req-received');
+    setTimeout(() => empEl.classList.remove('req-received'), 320);
+  };
+
+  // PM throw animation + speech
+  const speech = document.getElementById('pm-speech');
+  pmEl.classList.remove('sending'); void pmEl.offsetWidth; pmEl.classList.add('sending');
+  speech.classList.add('show');
+  setTimeout(() => speech.classList.remove('show'), 500);
+}
+
+// ══════════════════════════════════════════
+//  TICK
+// ══════════════════════════════════════════
+function tick() {
+  const work     = isWorkTime();
+  const speedMul = work ? 1 : OFF_SPEED;
+
+  // 1. Detect work-phase transitions
+  if (state.workPhase === 'working' && !work) {
+    state.workPhase = 'offduty';
+    applyTheme(false);
+    generateDayLog();
+    spawnFloat('🌙 下班了', (() => {
+      const pm = document.getElementById('pm-char');
+      const r  = pm ? pm.getBoundingClientRect() : { left: 60, width: 30, top: 80 };
+      return r.left + r.width / 2;
+    })(), (() => {
+      const pm = document.getElementById('pm-char');
+      return pm ? pm.getBoundingClientRect().top - 8 : 80;
+    })(), '#93c5fd', '12px');
+  } else if (state.workPhase === 'offduty' && work) {
+    state.workPhase = 'working';
+    applyTheme(true);
+    spawnFloat('☀️ 上班了', (() => {
+      const pm = document.getElementById('pm-char');
+      const r  = pm ? pm.getBoundingClientRect() : { left: 60, width: 30, top: 80 };
+      return r.left + r.width / 2;
+    })(), (() => {
+      const pm = document.getElementById('pm-char');
+      return pm ? pm.getBoundingClientRect().top - 8 : 80;
+    })(), '#fde68a', '12px');
+  }
+
+  // 2. Advance day (off-hours run faster)
+  const dpInc = TICK_SEC / state.dayDuration * speedMul;
+  state.dayProgress += dpInc;
+  if (state.dayProgress >= 1) {
+    state.dayProgress -= 1;
+    state.dayCount++;
+    spawnDayFX();
+    randomizeAllEmpSchedules();
+    scheduleEvents(); // plan random events for the new day
+  }
+
+  // Fire any pending events whose trigger time has arrived
+  while (state.pendingEvents.length > 0 && state.pendingEvents[0].triggerAt <= state.dayProgress) {
+    fireEvent(state.pendingEvents.shift());
+  }
+
+  // 3. Accumulate reqs proportional to dayProgress increment (reqPerDay per game-day)
+  state.reqAccumulator += state.reqPerDay * dpInc;
+  while (state.reqAccumulator >= 1) {
+    state.reqAccumulator -= 1;
+    if (state.reqPool < state.reqPoolMax) {
+      state.reqPool++;
+      if (work) spawnPoolAddFX();
+    }
+  }
+
+  // 4. Assign reqs & fire projectiles (always check, filtered inside assignReqs by per-emp schedule)
+  assignReqs();
+  projTimer -= TICK_SEC;
+  if (projTimer <= 0 && projQueue.length > 0) {
+    fireProjectile(projQueue.shift());
+    projTimer = 0.4;
+  }
+
+  // 5. Update display
+  updateDayRing();
+  updatePoolDisplay();
+
+  // 6. Employee ticks — each employee ticks only during their personal work hours
+  for (const emp of state.employees) {
+    if (!isEmpWorkTime(emp)) {
+      updateEmpCard(emp);
+      continue;
+    }
+
+    if (emp.state === 'focusing') {
+      emp.reqWorkDone += TICK_SEC;
+      emp.focusTimer  -= TICK_SEC;
+      emp.workProgress = Math.min(1, emp.reqWorkDone / emp.reqWorkNeeded);
+
+      if (emp.reqWorkDone >= emp.reqWorkNeeded) {
+        completeReq(emp);
+        if (state.reqPool > 0) assignReq(emp);
+      } else if (emp.focusTimer <= 0) {
+        emp.state        = 'distracted';
+        emp.distractTimer= DISTRACT_DUR;
+        emp.isZoned = Math.random() < Math.max(0, Math.min(0.9, (10 - emp.stamina) * 0.06 + (emp.distractBoost || 0)));
+        if (emp.isZoned) state.dayStats.zoned++;
+      }
+      updateEmpCard(emp);
+    } else if (emp.state === 'distracted') {
+      if (!emp.isZoned) {
+        emp.distractTimer -= TICK_SEC;
+        if (emp.distractTimer <= 0) {
+          emp.state     = 'focusing';
+          emp.focusTimer= focusDuration(emp);
+          emp.focusMax  = emp.focusTimer;
+          emp.isZoned   = false;
+        }
+      }
+      updateEmpCard(emp);
+    }
+  }
+
+  updateInfoBar();
+}
+
+// ══════════════════════════════════════════
+//  RECRUIT
+// ══════════════════════════════════════════
+function openRecruit() {
+  renderRecruitPanel();
+  document.getElementById('pull-result').style.display = 'none';
+  document.getElementById('recruit-overlay').classList.remove('hidden');
+}
+function closeRecruit() {
+  document.getElementById('recruit-overlay').classList.add('hidden');
+}
+
+function renderRecruitPanel() {
+  const [ssr, sr, r] = POOL_RATES[state.poolLevel];
+  document.getElementById('recruit-sub').textContent = `卡池 Lv.${state.poolLevel + 1}  ·  当前概率分布`;
+  document.getElementById('recruit-rates').innerHTML = `
+    <div class="rate-item"><div class="rate-rarity rate-SSR">SSR</div><div class="rate-pct rate-SSR">${Math.round(ssr*100)}%</div></div>
+    <div class="rate-item"><div class="rate-rarity rate-SR">SR</div><div class="rate-pct rate-SR">${Math.round(sr*100)}%</div></div>
+    <div class="rate-item"><div class="rate-rarity rate-R">R</div><div class="rate-pct rate-R">${Math.round(r*100)}%</div></div>`;
+
+  const freeSlots = state.workstationCount - state.employees.length;
+  document.getElementById('btn-pull1').disabled  = state.money < PULL_COST_1  || freeSlots <= 0;
+  document.getElementById('btn-pull10').disabled = state.money < PULL_COST_10 || freeSlots <= 0;
+
+  const pRow = document.getElementById('pool-upgrade-row');
+  if (state.poolLevel >= POOL_UPGRADE_COSTS.length) {
+    pRow.innerHTML = `<div class="pool-info"><div class="pool-level-label">✨ 卡池已满级</div><div class="pool-desc">SSR 概率已达最高</div></div>`;
+  } else {
+    const nextCost  = POOL_UPGRADE_COSTS[state.poolLevel];
+    const nextRates = POOL_RATES[state.poolLevel + 1];
+    const canUp     = state.money >= nextCost;
+    pRow.innerHTML = `
+      <div class="pool-info">
+        <div class="pool-level-label">卡池等级 ${state.poolLevel + 1} / ${POOL_UPGRADE_COSTS.length + 1}</div>
+        <div class="pool-desc">升级后 SSR ${Math.round(nextRates[0]*100)}% · SR ${Math.round(nextRates[1]*100)}%</div>
+      </div>
+      <button class="pool-upgrade-btn" id="pool-up-btn" ${canUp ? '' : 'disabled'}>升级 💰${nextCost}</button>`;
+    document.getElementById('pool-up-btn').addEventListener('click', () => {
+      if (state.money < nextCost || state.poolLevel >= POOL_UPGRADE_COSTS.length) return;
+      state.money -= nextCost;
+      state.poolLevel++;
+      updateTopUI();
+      renderRecruitPanel();
+    });
+  }
+}
+
+function doPull(count) {
+  const cost = count === 1 ? PULL_COST_1 : PULL_COST_10;
+  const freeSlots = state.workstationCount - state.employees.length;
+  if (state.money < cost || freeSlots <= 0) return;
+
+  state.money -= cost;
+  updateTopUI();
+
+  const pulled = [];
+  for (let i = 0; i < count; i++) pulled.push(createEmployee(pullRarity()));
+
+  showPullResult(pulled, freeSlots);
+}
+
+function showPullResult(pulled, freeSlots) {
+  const resultEl = document.getElementById('pull-result');
+  resultEl.style.cssText = 'display:flex;flex-direction:column;gap:10px';
+
+  // Auto-select top N by rarity+stats
+  const rarityScore = { SSR: 300, SR: 200, R: 100 };
+  const ranked = pulled
+    .map((emp, i) => ({ i, score: rarityScore[emp.rarity] + emp.speed + emp.stamina + emp.quality }))
+    .sort((a, b) => b.score - a.score);
+  const selected = new Set(ranked.slice(0, freeSlots).map(x => x.i));
+
+  function render() {
+    resultEl.innerHTML = '';
+
+    const hint = document.createElement('div');
+    hint.className = 'pull-summary';
+    hint.style.marginBottom = '0';
+    const ssrN = pulled.filter(e => e.rarity === 'SSR').length;
+    const srN  = pulled.filter(e => e.rarity === 'SR').length;
+    let hintTxt = `点击卡片选择录用（空余工位 ${freeSlots} 个）`;
+    if (ssrN) hintTxt = `✨ ${ssrN} 位 SSR！ · ` + hintTxt;
+    else if (srN) hintTxt = `💜 ${srN} 位 SR · ` + hintTxt;
+    hint.textContent = hintTxt;
+    resultEl.appendChild(hint);
+
+    const cardsEl = document.createElement('div');
+    cardsEl.className = 'pull-result-cards';
+    pulled.forEach((emp, i) => {
+      const isSel = selected.has(i);
+      const card = document.createElement('div');
+      card.className = `pull-card rarity-${emp.rarity}${isSel ? '' : ' pull-unselected'}`;
+      card.style.animationDelay = (i * 0.06) + 's';
+      card.innerHTML = `
+        ${isSel ? '<div class="pull-sel-check">✓</div>' : ''}
+        <div class="pull-card-emoji">${emp.emoji}</div>
+        <div class="pull-card-name">${emp.name}</div>
+        <div class="pull-card-rarity">${emp.rarity}</div>
+        <div class="pull-card-stats">速${emp.speed} 精${emp.stamina} 质${emp.quality}</div>`;
+      card.addEventListener('click', () => {
+        if (isSel) { selected.delete(i); }
+        else if (selected.size < freeSlots) { selected.add(i); }
+        render();
+      });
+      cardsEl.appendChild(card);
+    });
+    resultEl.appendChild(cardsEl);
+
+    const confirmRow = document.createElement('div');
+    confirmRow.className = 'pull-confirm-row';
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'pull-confirm-btn';
+    confirmBtn.disabled = selected.size === 0;
+    confirmBtn.textContent = selected.size > 0
+      ? `✅ 录用选中的 ${selected.size} 人`
+      : '请选择要录用的员工';
+    confirmBtn.addEventListener('click', () => {
+      pulled.filter((_, i) => selected.has(i)).forEach(emp => state.employees.push(emp));
+      renderScene();
+      updateTopUI();
+      renderRecruitPanel();
+      resultEl.style.display = 'none';
+      assignReqs();
+    });
+    confirmRow.appendChild(confirmBtn);
+    resultEl.appendChild(confirmRow);
+  }
+
+  render();
+}
+
+// ══════════════════════════════════════════
 //  SHOP
-// ═══════════════════════════════════════
+// ══════════════════════════════════════════
 const SHOP_DEFS = [
   {
-    icon: '⚡',
-    name: '加速生长',
-    desc: '所有作物生长时间 -10%',
-    getExtra: () => `已购 ${state.speedLevel}/8 次`,
-    price: () => Math.round(100 * Math.pow(2, state.speedLevel)),
-    canBuy: () => state.speedLevel < 8,
-    apply: () => { state.speedLevel++; },
+    id: 'pm_output', icon: '📋', name: '策划产能提升',
+    desc: '每天多产出 1 个需求进入需求池',
+    maxLevel: 5, costs: [100, 280, 700, 1800, 4500],
+    canBuy: () => state.shopLevels.pm_output < 5,
+    apply:  () => { state.shopLevels.pm_output++; state.reqPerDay++; },
+    extra:  () => `当前产能: ${state.reqPerDay}个/天 · 已购 ${state.shopLevels.pm_output}/5`,
   },
   {
-    icon: '🪙',
-    name: '金币加成',
-    desc: '所有收获金币 +20%',
-    getExtra: () => `已购 ${state.coinLevel}/5 次`,
-    price: () => Math.round(200 * Math.pow(2.2, state.coinLevel)),
-    canBuy: () => state.coinLevel < 5,
-    apply: () => { state.coinLevel++; },
+    id: 'quality_bonus', icon: '📈', name: '需求文档优化',
+    desc: '所有需求落地收益 +20%',
+    maxLevel: 5, costs: [200, 500, 1200, 3000, 7000],
+    canBuy: () => state.shopLevels.quality_bonus < 5,
+    apply:  () => { state.shopLevels.quality_bonus++; state.qualityBonus += 0.2; },
+    extra:  () => `当前加成: +${Math.round(state.qualityBonus*100)}% · 已购 ${state.shopLevels.quality_bonus}/5`,
   },
   {
-    icon: '🤖',
-    name: '自动收获',
-    desc: '每15秒自动收割成熟作物',
-    getExtra: () => state.autoHarvest ? '✅ 已激活' : '',
-    price: () => 500,
-    canBuy: () => !state.autoHarvest,
-    apply: () => { state.autoHarvest = true; },
+    id: 'equipment', icon: '🖥️', name: '设备升级',
+    desc: '所有员工处理速度 +1（减少完成需求所需时间）',
+    maxLevel: 5, costs: [300, 750, 1800, 4500, 10000],
+    canBuy: () => state.shopLevels.equipment < 5,
+    apply:  () => { state.shopLevels.equipment++; state.equipBonus++; renderScene(); },
+    extra:  () => `速度加成: +${state.equipBonus} · 已购 ${state.shopLevels.equipment}/5`,
+  },
+  {
+    id: 'workstation', icon: '🏢', name: '扩展工位',
+    desc: '增加 1 个员工工位',
+    maxLevel: 6, costs: WORKSTATION_COSTS,
+    canBuy: () => state.shopLevels.workstation < 6,
+    apply:  () => { state.shopLevels.workstation++; state.workstationCount++; renderScene(); },
+    extra:  () => `当前工位: ${state.workstationCount} · 已购 ${state.shopLevels.workstation}/6`,
+  },
+  {
+    id: 'focus_train', icon: '🧘', name: '专注力培训',
+    desc: '全员每次专注窗口 +8秒（减少走神频率）',
+    maxLevel: 5, costs: [200, 500, 1200, 3000, 7000],
+    canBuy: () => state.shopLevels.focus_train < 5,
+    apply:  () => { state.shopLevels.focus_train++; state.focusBonus += 8; },
+    extra:  () => `专注加成: +${state.focusBonus}s · 已购 ${state.shopLevels.focus_train}/5`,
   },
 ];
 
 function openShop() {
-  document.getElementById('shop-coins').textContent = state.coins;
+  document.getElementById('shop-money').textContent = state.money;
   const el = document.getElementById('shop-items');
   el.innerHTML = '';
   SHOP_DEFS.forEach(def => {
-    const price = def.price();
-    const can = def.canBuy() && state.coins >= price;
-    const disabled = !def.canBuy();
+    const lv     = state.shopLevels[def.id];
+    const maxed  = lv >= def.maxLevel;
+    const price  = maxed ? 0 : def.costs[lv];
+    const canBuy = !maxed && state.money >= price;
+
     const div = document.createElement('div');
-    div.className = 'shop-item' + (disabled ? ' disabled' : '');
-    const extra = def.getExtra();
+    div.className = 'shop-item' + (maxed ? ' maxed' : '');
     div.innerHTML = `
       <span class="shop-icon">${def.icon}</span>
       <div class="shop-info">
         <div class="shop-name">${def.name}</div>
         <div class="shop-desc">${def.desc}</div>
-        ${extra ? `<div class="shop-extra">${extra}</div>` : ''}
+        <div class="shop-extra">${def.extra()}</div>
       </div>
-      <button class="buy-btn" ${can ? '' : 'disabled'}>${disabled ? '已满' : price + 'g'}</button>`;
-    div.querySelector('.buy-btn').addEventListener('click', () => {
-      if (!def.canBuy() || state.coins < price) return;
-      state.coins -= price;
+      <button class="shop-buy-btn" ${canBuy ? '' : 'disabled'}>${maxed ? '已满级' : price + 'g'}</button>`;
+    div.querySelector('.shop-buy-btn').addEventListener('click', () => {
+      if (maxed || state.money < price) return;
+      state.money -= price;
       def.apply();
-      updateUI();
-      renderGrid();
-      openShop(); // re-render shop
+      updateTopUI();
+      openShop();
     });
     el.appendChild(div);
   });
   document.getElementById('shop-overlay').classList.remove('hidden');
 }
+function closeShop() { document.getElementById('shop-overlay').classList.add('hidden'); }
 
-function closeShop() {
-  document.getElementById('shop-overlay').classList.add('hidden');
-}
+// ══════════════════════════════════════════
+//  EMPLOYEE MANAGE
+// ══════════════════════════════════════════
+let fireConfirming = false;
+let fireConfirmTimer = null;
 
-// ═══════════════════════════════════════
-//  UI UPDATE
-// ═══════════════════════════════════════
-function updateUI() {
-  document.getElementById('coins-val').textContent = state.coins;
-  document.getElementById('total-val').textContent = state.totalEarned;
+function openEmpManage(empId) {
+  const emp = state.employees.find(e => e.id === empId);
+  if (!emp) return;
+  fireConfirming = false;
+  clearTimeout(fireConfirmTimer);
 
-  const speedEl = document.getElementById('speed-status');
-  if (state.speedLevel > 0) {
-    const pct = Math.round((1 - Math.pow(0.9, state.speedLevel)) * 100);
-    speedEl.textContent = `⚡ 速度: -${pct}%`;
-    speedEl.classList.add('status-active');
-  } else {
-    speedEl.textContent = '⚡ 速度: 正常';
-    speedEl.classList.remove('status-active');
-  }
+  const rarityColor = { R: '#94a3b8', SR: '#a78bfa', SSR: '#fbbf24' }[emp.rarity];
+  document.getElementById('emp-manage-content').innerHTML = `
+    <div class="emp-manage-header">
+      <div class="emp-manage-emoji">${emp.emoji}</div>
+      <div class="emp-manage-info">
+        <div class="emp-manage-name">${emp.name}</div>
+        <div class="emp-manage-meta" style="color:${rarityColor}">${emp.rarity}</div>
+        <div class="emp-manage-meta">需求进度 ${Math.round(emp.workProgress * 100)}%</div>
+      </div>
+    </div>
+    <div class="emp-manage-stats">
+      <div class="emp-manage-stat">
+        <span class="emp-manage-stat-num" style="color:#93c5fd">${effectiveSpeed(emp)}</span>
+        <span class="emp-manage-stat-lbl">速度</span>
+      </div>
+      <div class="emp-manage-stat">
+        <span class="emp-manage-stat-num" style="color:#86efac">${emp.stamina}</span>
+        <span class="emp-manage-stat-lbl">精力</span>
+      </div>
+      <div class="emp-manage-stat">
+        <span class="emp-manage-stat-num" style="color:#fde68a">${emp.quality}</span>
+        <span class="emp-manage-stat-lbl">质量</span>
+      </div>
+    </div>
+    <div class="emp-manage-section">
+      <div class="emp-manage-section-title">改名</div>
+      <div class="emp-rename-row">
+        <input class="emp-rename-input" id="rename-input" maxlength="8" value="${emp.name}" placeholder="输入新名字">
+        <button class="emp-rename-btn" id="rename-btn">确认</button>
+      </div>
+    </div>
+    <div class="emp-manage-section">
+      <div class="emp-manage-section-title">解雇</div>
+      <button class="emp-fire-btn" id="fire-btn">辞退 ${emp.name}</button>
+    </div>`;
 
-  const bonusEl = document.getElementById('bonus-status');
-  if (state.coinLevel > 0) {
-    const pct = Math.round((Math.pow(1.2, state.coinLevel) - 1) * 100);
-    bonusEl.textContent = `🪙 加成: +${pct}%`;
-    bonusEl.classList.add('status-active');
-  } else {
-    bonusEl.textContent = '🪙 加成: 无';
-    bonusEl.classList.remove('status-active');
-  }
+  document.getElementById('rename-btn').addEventListener('click', () => {
+    const val = document.getElementById('rename-input').value.trim();
+    if (!val) return;
+    emp.name = val;
+    renderScene();
+    closeEmpManage();
+  });
 
-  const autoEl = document.getElementById('auto-status');
-  autoEl.textContent = state.autoHarvest ? '🤖 自动: 开启' : '🤖 自动: 关闭';
-  autoEl.classList.toggle('status-active', state.autoHarvest);
-}
+  document.getElementById('rename-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('rename-btn').click();
+  });
 
-// ═══════════════════════════════════════
-//  EFFECTS
-// ═══════════════════════════════════════
-function spawnHarvestFX(el, coins) {
-  const rect = el.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-
-  // Float text
-  const ft = document.createElement('div');
-  ft.className = 'float-text';
-  ft.textContent = `+${coins}💰`;
-  ft.style.left = (cx - 20) + 'px';
-  ft.style.top = cy + 'px';
-  document.body.appendChild(ft);
-  setTimeout(() => ft.remove(), 1000);
-
-  // Particles
-  const colors = ['#ffd700', '#a8e063', '#56ab2f', '#fff', '#ffaa00'];
-  for (let i = 0; i < 10; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    p.style.background = colors[i % colors.length];
-    const s = 4 + Math.random() * 5;
-    p.style.width = s + 'px'; p.style.height = s + 'px';
-    p.style.left = cx + 'px'; p.style.top = cy + 'px';
-    document.body.appendChild(p);
-    const a = (Math.PI * 2 * i) / 10 + Math.random() * 0.4;
-    const d = 20 + Math.random() * 35;
-    p.animate([
-      { transform: 'translate(0,0) scale(1)', opacity: 1 },
-      { transform: `translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px) scale(0)`, opacity: 0 }
-    ], { duration: 380, easing: 'ease-out' }).onfinish = () => p.remove();
-  }
-}
-
-// ═══════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════
-let toastTimer;
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
-}
-
-// ═══════════════════════════════════════
-//  TICK (every second)
-// ═══════════════════════════════════════
-let autoTimer = 0;
-function tick() {
-  // Update progress bars without full re-render
-  for (let i = 0; i < state.plotCount; i++) {
-    const p = state.plots[i];
-    if (p.cropIdx < 0 || p.plantTime === null) continue;
-    const growMs = effectiveGrowMs(p.cropIdx);
-    const elapsed = Date.now() - p.plantTime;
-    const ready = elapsed >= growMs;
-    const pct = Math.min(1, elapsed / growMs);
-
-    const plotEl = document.querySelector(`.plot[data-idx="${i}"]`);
-    if (!plotEl) continue;
-
-    if (ready && plotEl.classList.contains('growing')) {
-      // Transition to ready state
-      plotEl.classList.remove('growing');
-      plotEl.classList.add('ready');
-      const label = plotEl.querySelector('.plot-label');
-      if (label) label.textContent = '可收获！';
-    } else if (!ready) {
-      const rem = growMs - elapsed;
-      const label = plotEl.querySelector('.plot-label');
-      if (label) label.textContent = formatTime(rem);
-      const bar = plotEl.querySelector('.plot-progress-bar');
-      if (bar) bar.style.width = Math.round(pct * 100) + '%';
+  const fireBtn = document.getElementById('fire-btn');
+  fireBtn.addEventListener('click', () => {
+    if (!fireConfirming) {
+      fireConfirming = true;
+      fireBtn.textContent = '⚠️ 确认辞退？再次点击确认';
+      fireBtn.classList.add('confirm');
+      fireConfirmTimer = setTimeout(() => {
+        fireConfirming = false;
+        fireBtn.textContent = `辞退 ${emp.name}`;
+        fireBtn.classList.remove('confirm');
+      }, 3000);
+    } else {
+      clearTimeout(fireConfirmTimer);
+      state.employees = state.employees.filter(e => e.id !== empId);
+      renderScene();
+      updateTopUI();
+      closeEmpManage();
     }
-  }
+  });
 
-  updateHarvestAllBtn();
-
-  // Auto harvest
-  if (state.autoHarvest) {
-    autoTimer++;
-    if (autoTimer >= 15) {
-      autoTimer = 0;
-      let any = false;
-      for (let i = 0; i < state.plotCount; i++) {
-        const p = state.plots[i];
-        if (p.cropIdx < 0 || p.plantTime === null) continue;
-        if (Date.now() - p.plantTime >= effectiveGrowMs(p.cropIdx)) {
-          const earned = effectiveYield(p.cropIdx);
-          state.coins += earned;
-          state.totalEarned += earned;
-          const plotEl = document.querySelector(`.plot[data-idx="${i}"]`);
-          if (plotEl) spawnHarvestFX(plotEl, earned);
-          state.plots[i] = { cropIdx: -1, plantTime: null };
-          any = true;
-        }
-      }
-      if (any) {
-        checkUnlocks();
-        renderGrid();
-        updateUI();
-      }
-    }
-  }
+  document.getElementById('emp-manage-overlay').classList.remove('hidden');
 }
 
-// ═══════════════════════════════════════
+function closeEmpManage() {
+  document.getElementById('emp-manage-overlay').classList.add('hidden');
+  fireConfirming = false;
+  clearTimeout(fireConfirmTimer);
+}
+
+// ══════════════════════════════════════════
 //  EVENTS
-// ═══════════════════════════════════════
-document.getElementById('btn-shop').addEventListener('click', openShop);
-document.getElementById('btn-harvest-all').addEventListener('click', harvestAll);
-document.getElementById('seed-close').addEventListener('click', closeSeedPicker);
-document.getElementById('shop-close').addEventListener('click', closeShop);
+// ══════════════════════════════════════════
+document.getElementById('emp-manage-close').addEventListener('click', closeEmpManage);
+document.getElementById('emp-manage-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('emp-manage-overlay')) closeEmpManage();
+});
 
-document.getElementById('seed-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('seed-overlay')) closeSeedPicker();
+document.getElementById('emp-area').addEventListener('click', e => {
+  // Manage button
+  const manageBtn = e.target.closest('.emp-manage-btn');
+  if (manageBtn) {
+    e.stopPropagation();
+    openEmpManage(parseInt(manageBtn.dataset.manageId));
+    return;
+  }
+  // Snap distracted employee
+  const card = e.target.closest('.emp-card');
+  if (!card) return;
+  const emp = state.employees.find(em => em.id === parseInt(card.dataset.empId));
+  if (!emp || emp.state !== 'distracted') return;
+
+  const maxPenalty = Math.max(4, focusDuration(emp) * 0.5);
+  emp.snapPenalty  = Math.min((emp.snapPenalty || 0) + 4, maxPenalty);
+  emp.state        = 'focusing';
+  emp.focusTimer   = Math.max(6, focusDuration(emp) - emp.snapPenalty);
+  emp.focusMax     = emp.focusTimer;
+  emp.distractTimer= 0;
+  emp.isZoned      = false;
+  state.dayStats.snaps++;
+
+  const rect = card.getBoundingClientRect();
+  spawnFloat('👊 拍醒！', rect.left + rect.width / 2, rect.top + 14, '#fb923c', '13px');
+  card.classList.add('req-received');
+  setTimeout(() => card.classList.remove('req-received'), 320);
+  updateEmpCard(emp);
+});
+
+document.getElementById('btn-recruit').addEventListener('click', openRecruit);
+document.getElementById('btn-shop').addEventListener('click', openShop);
+document.getElementById('recruit-close').addEventListener('click', closeRecruit);
+document.getElementById('shop-close').addEventListener('click', closeShop);
+document.getElementById('btn-pull1').addEventListener('click',  () => doPull(1));
+document.getElementById('btn-pull10').addEventListener('click', () => doPull(10));
+document.getElementById('recruit-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('recruit-overlay')) closeRecruit();
 });
 document.getElementById('shop-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('shop-overlay')) closeShop();
 });
 
-// ═══════════════════════════════════════
-//  START
-// ═══════════════════════════════════════
-initPlots();
-renderGrid();
-updateUI();
-setInterval(tick, 1000);
+// ══════════════════════════════════════════
+//  SAVE / LOAD
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  VERSION & CHANGELOG
+// ══════════════════════════════════════════
+const VERSION  = '1.8.0';
+const VER_KEY  = 'reqFactory_ver';
+
+const CHANGELOG = [
+  {
+    ver: '1.8.0', date: '2026-04-02',
+    title: '产品发布里程碑',
+    items: [
+      { icon: '🚀', text: '累计完成需求达到里程碑时触发版本发布，获得大额奖励' },
+      { icon: '💰', text: '每次发布奖励金额递增（800→2000→5000→…）' },
+      { icon: '📈', text: '每次发布永久提升需求收益 +5%，上限 +80%' },
+      { icon: '🎉', text: '发布时弹出庆祝动画，并在日志区记录事件' },
+    ],
+  },
+  {
+    ver: '1.7.0', date: '2026-04-02',
+    title: '随机事件系统',
+    items: [
+      { icon: '🎲', text: '每天上班时随机触发 0-3 个事件，记录于工作日志' },
+      { icon: '👤', text: '员工事件：生日、加班、请假、灵感爆发、失恋、技术突破…' },
+      { icon: '🏢', text: '公司事件：外卖、裁员传言、P0事故、团建、投资人空降…' },
+      { icon: '🐱', text: '奇葩事件：办公室猫、游戏机、神秘快递、竞争对手…' },
+    ],
+  },
+  {
+    ver: '1.6.0', date: '2026-04-02',
+    title: '个人作息随机化',
+    items: [
+      { icon: '🎲', text: '每位员工拥有各自的上下班时间，每天随机重新生成' },
+      { icon: '⭐', text: 'R 员工可能迟到早退；SR 接近标准；SSR 卷王早来晚走' },
+      { icon: '📋', text: '需求池越满，员工越努力（上班更早、下班更晚）' },
+      { icon: '🕐', text: '员工卡片右下角显示今日排班时间' },
+    ],
+  },
+  {
+    ver: '1.5.0', date: '2026-04-02',
+    title: '作息制度与工作日志',
+    items: [
+      { icon: '🕙', text: '新增24小时制时钟，10:00-20:00 为工作时间，其余时间员工下班' },
+      { icon: '🌙', text: '下班期间时间流速加快（6倍速），员工暂停工作但进度保留' },
+      { icon: '📋', text: '新增工作日志栏（宽屏右侧），每天下班时自动生成当日汇报' },
+    ],
+  },
+  {
+    ver: '1.4.0', date: '2026-04-02',
+    title: '员工互动与管理',
+    items: [
+      { icon: '👊', text: '点击走神中的员工卡片可立即将其拍醒恢复专注，但下一次专注窗口会稍短' },
+      { icon: '⚙️', text: '员工卡片右上角新增管理按钮，可以对员工改名或辞退（辞退需二次确认）' },
+    ],
+  },
+  {
+    ver: '1.3.0', date: '2026-04-02',
+    title: '存档与适配',
+    items: [
+      { icon: '💾', text: '新增自动存档，刷新页面后游戏进度完整保留' },
+      { icon: '🖥️', text: '桌面端响应式适配，画面自动撑满屏幕，员工卡片自动多列排布' },
+      { icon: '📢', text: '新增版本更新公告系统' },
+    ],
+  },
+  {
+    ver: '1.2.0', date: '2026-04-01',
+    title: '24小时制重构',
+    items: [
+      { icon: '📅', text: '全新日历制：每2分钟现实时间等于游戏内1天' },
+      { icon: '📋', text: '需求池系统：策划每天产出固定需求，员工空闲时自动领取' },
+      { icon: '🎯', text: '专注/走神循环：员工做需求时会周期性分神，体现精力限制' },
+      { icon: '⏳', text: '多日需求：低速员工的单个需求可横跨多天才能完成' },
+      { icon: '🛒', text: '商店全面重做：策划产能、文档优化、设备升级、专注培训等5项' },
+    ],
+  },
+  {
+    ver: '1.0.0', date: '2026-03-31',
+    title: '初始版本',
+    items: [
+      { icon: '🏭', text: '需求工厂正式上线，扮演策划主管向员工分配需求' },
+      { icon: '🎴', text: '抽卡招募系统，R/SR/SSR三个稀有度，可升级卡池概率' },
+      { icon: '📊', text: '员工三维属性：速度、精力、质量，影响效率与收益' },
+    ],
+  },
+];
+
+function checkVersion() {
+  const seen = localStorage.getItem(VER_KEY);
+  if (seen === VERSION) return; // already seen this version
+  showAnnounce(seen);
+}
+
+function showAnnounce(prevVer) {
+  const latest = CHANGELOG[0];
+  const isNew  = !!prevVer; // false = first ever load
+
+  let html = `
+    <div class="announce-ver">🆕 v${latest.ver}</div>
+    <div class="announce-title">${latest.title}</div>
+    <div class="announce-date">${latest.date}${isNew ? ' · 自上次游玩后有更新' : ' · 欢迎来到需求工厂！'}</div>
+    <div class="announce-section">
+      <div class="announce-section-title">本次更新</div>
+      ${latest.items.map(it => `
+        <div class="announce-item">
+          <span class="announce-item-dot">${it.icon}</span>
+          <span>${it.text}</span>
+        </div>`).join('')}
+    </div>`;
+
+  const history = CHANGELOG.slice(1);
+  if (history.length > 0) {
+    html += `<div class="announce-divider"></div>
+    <div class="announce-history-title" id="announce-hist-toggle">▾ 历史版本</div>
+    <div class="announce-history" id="announce-hist">`;
+    history.forEach(v => {
+      html += `<div class="announce-old-ver" style="margin-top:10px">
+        <strong>v${v.ver}</strong> <span style="margin-left:6px;font-size:9px">${v.date} · ${v.title}</span>
+      </div>`;
+      v.items.forEach(it => {
+        html += `<div class="announce-old-item">${it.icon} ${it.text}</div>`;
+      });
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById('announce-content').innerHTML = html;
+  document.getElementById('announce-overlay').classList.remove('hidden');
+
+  const tog = document.getElementById('announce-hist-toggle');
+  if (tog) tog.addEventListener('click', () => {
+    const h = document.getElementById('announce-hist');
+    h.classList.toggle('open');
+    tog.textContent = h.classList.contains('open') ? '▴ 历史版本' : '▾ 历史版本';
+  });
+}
+
+document.getElementById('announce-close').addEventListener('click', () => {
+  document.getElementById('announce-overlay').classList.add('hidden');
+  localStorage.setItem(VER_KEY, VERSION);
+});
+
+const SAVE_KEY = 'reqFactory_v1';
+
+function saveGame() {
+  const data = {
+    money: state.money,
+    totalEarned: state.totalEarned,
+    dayCount: state.dayCount,
+    dayProgress: state.dayProgress,
+    dayDuration: state.dayDuration,
+    reqPool: state.reqPool,
+    reqPoolMax: state.reqPoolMax,
+    reqPerDay: state.reqPerDay,
+    reqAccumulator: state.reqAccumulator,
+    reqSent: state.reqSent,
+    qualityBonus: state.qualityBonus,
+    equipBonus: state.equipBonus,
+    focusBonus: state.focusBonus,
+    workstationCount: state.workstationCount,
+    poolLevel: state.poolLevel,
+    shopLevels: { ...state.shopLevels },
+    empIdCounter: state.empIdCounter,
+    employees: state.employees.map(e => ({ ...e })),
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  const badge = document.getElementById('save-badge');
+  if (badge) {
+    badge.style.opacity = '1';
+    clearTimeout(badge._t);
+    badge._t = setTimeout(() => { badge.style.opacity = '0'; }, 1500);
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    Object.assign(state, data);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ══════════════════════════════════════════
+//  STARTER EMPLOYEES
+// ══════════════════════════════════════════
+function addStarterEmployees() {
+  const e1 = createEmployee('R');
+  e1.name = '小明'; e1.speed = 2; e1.stamina = 4; e1.quality = 2;
+  const e2 = createEmployee('R');
+  e2.name = '小红'; e2.speed = 2; e2.stamina = 3; e2.quality = 3;
+  state.employees.push(e1, e2);
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+if (!loadGame()) {
+  addStarterEmployees();
+  state.dayProgress = WORK_START; // new game starts at 10:00
+}
+state.workPhase = isWorkTime() ? 'working' : 'offduty';
+applyTheme(state.workPhase === 'working');
+randomizeAllEmpSchedules();
+if (!state.pendingEvents || !state.pendingEvents.length) scheduleEvents(); // schedule if none loaded
+renderScene();
+renderLogPanel();
+updateTopUI();
+updatePoolDisplay();
+updateDayRing();
+setInterval(tick, 100);
+setInterval(saveGame, 10000);
+window.addEventListener('beforeunload', saveGame);
+checkVersion();
 </script>
 </body>
 </html>
